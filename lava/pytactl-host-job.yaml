@@ -15,6 +15,10 @@
 # report the worker's attached boards read-only from sysfs. Driving a board from
 # the container needs USB passthrough in the dispatcher's docker test shell.
 #
+# First green run: job 406746 on qcs8300-ride-01 (nuc-worker-19) - 30 test cases
+# passed, unit suite 285 passed / 1 skipped / 25 xfailed against the config set
+# installed from the wheel.
+#
 # Submit with:
 #   lavacli jobs submit lava/pytactl-host-job.yaml
 
