@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0] - 2026-10-02
+
+This release moves pytactl from the combined upstream `.tcnf` config files to
+the shared pinout format, and bundles the full board config set with the
+package. A config directory installed by 2.0 is no longer picked up as is.
+
+### Breaking
+
+- Board configs are loaded from `*.pinout.json` files instead of the combined
+  `.tcnf` files. A config directory installed by 2.0 holds only `.tcnf` files,
+  which are no longer found: re-run `pytactl installconfigs`, convert it in
+  place with `pytactl convertconfigs <dir>`, or delete it to fall back to the
+  bundled set.
+- Config scripts must indent statements with a single tab. Configs that break
+  this are rejected with a `ConfigScriptError` rather than loaded, so a raw
+  upstream `.tcnf` passed to `--config-file-path` may fail where the converted
+  config loads.
+
 ### Added
 
 - `pytactl convertconfigs <dir>` converts a directory of TAC config files into
@@ -32,6 +50,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   entries with no config of their own point at, for a destination that holds
   the FTDI Alpaca-Lite default under a name other than `default.pinout.json` -
   as the bundled set does.
+- A ready-made `60-pytactl.rules` udev rules file ships in the repository, so
+  USB access for non-root users is set up by copying it into
+  `/etc/udev/rules.d/` instead of writing rules by hand. It also covers
+  BugHopper v1, which the rules documented in the README were missing.
 
 ### Fixed
 
@@ -40,6 +62,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the whole config unloadable. `installconfigs` and `convertconfigs` re-indent
   scripts with tabs as they import them, logging each file they touch, so the
   bundled set and anything imported through either command is clean.
+- The example Alpaca udev rule in the README gains the missing
+  `TAG+="uaccess"`, without which it granted no access to the logged-in user.
+- Config-dependent tests skip, rather than fail, when no config set is
+  available, so the suite passes in isolated builds such as Debian packaging.
+  `PYTACTL_TAC_CONFIG_DIR` points the tests at a config set kept elsewhere.
+- PIC32CX configs are tested through the PIC32CX parser rather than falling
+  through to the FTDI one, which broke the tests when upstream added a new
+  PIC32CX platform.
 
 ### Changed
 
@@ -171,5 +201,7 @@ so it carries a number of breaking changes for anyone upgrading from 1.4.
 Earlier releases are recorded in the git history and in the
 [GitHub releases](https://github.com/qualcomm/pytactl/releases) page.
 
+[Unreleased]: https://github.com/qualcomm/pytactl/compare/v3.0...HEAD
+[3.0]: https://github.com/qualcomm/pytactl/compare/v2.0...v3.0
 [2.0]: https://github.com/qualcomm/pytactl/compare/v1.4...v2.0
 [1.4]: https://github.com/qualcomm/pytactl/releases/tag/v1.4
