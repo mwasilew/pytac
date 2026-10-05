@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1] - 2026-10-05
+
+### Added
+
+- An "Upstream config sync" GitHub workflow runs weekly, converts the
+  upstream qcom-test-automation-controller configs with
+  `scripts/sync_upstream_configs.py` and proposes a pull request when the
+  bundled set has drifted. Upstream changes deliberately not taken are listed
+  in `scripts/known-config-differences.json` and do not trigger a pull request
+  until upstream changes that file again.
+
+### Changed
+
+- Bundled configs are synced with upstream per file, so they may name
+  different upstream commits in their `source` annotation.
+
+### Fixed
+
+- `TAC_PSOC_35` uses a 2 second `powerDelay` instead of 18 seconds, which made
+  the RB1 board reboot after it had already started booting.
+
 ## [3.0] - 2026-10-02
 
 This release moves pytactl from the combined upstream `.tcnf` config files to
@@ -201,7 +222,8 @@ so it carries a number of breaking changes for anyone upgrading from 1.4.
 Earlier releases are recorded in the git history and in the
 [GitHub releases](https://github.com/qualcomm/pytactl/releases) page.
 
-[Unreleased]: https://github.com/qualcomm/pytactl/compare/v3.0...HEAD
+[Unreleased]: https://github.com/qualcomm/pytactl/compare/v3.1...HEAD
+[3.1]: https://github.com/qualcomm/pytactl/compare/v3.0...v3.1
 [3.0]: https://github.com/qualcomm/pytactl/compare/v2.0...v3.0
 [2.0]: https://github.com/qualcomm/pytactl/compare/v1.4...v2.0
 [1.4]: https://github.com/qualcomm/pytactl/releases/tag/v1.4

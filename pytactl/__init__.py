@@ -5,7 +5,7 @@ import os
 
 import platformdirs
 
-__version__ = "3.0.0"
+__version__ = "3.1.0"
 
 # Configs bundled with the package. Only the synthesized FTDI Alpaca-Lite
 # default (TAC_FTDI_13.pinout.json) ships here; the full config set (a
