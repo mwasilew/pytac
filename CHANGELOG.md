@@ -14,11 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instead of as a change to one long JSON string. Boards with the common
   wiring share `common.alpaca`, which defines the eight standard quick
   methods with every delay a variable set in the pinout's `variables`, and
-  `common-*.alpaca` variants redefine some of them for a difference several
-  boards share (one USB line, UEFI confirmed with the power key alone); a
-  board's own `TAC_<CHIP>_<ID>.alpaca` holds only the functions particular to
-  it, and `script_omit` lists the common ones it does not have. 35 of the 58
-  bundled configs share the common script, 27 of them entirely. The bundled configs, `installconfigs` and `convertconfigs` use
+  `common-*.alpaca` overlays redefine some of them for a difference several
+  boards share (one USB line, an extra USB line, UEFI confirmed with the
+  power key alone) or add functions several boards have (battery-backed EDL
+  and reset); a board's own `TAC_<CHIP>_<ID>.alpaca` holds only the functions
+  particular to it, and `script_omit` lists the common ones it does not have.
+  39 of the 58 bundled configs share the common script, 33 of them entirely. The bundled configs, `installconfigs` and `convertconfigs` use
   this layout, and every bundled board drives its pins with the same timings
   as before. Configs with the script inline, as upstream writes them, still
   load.

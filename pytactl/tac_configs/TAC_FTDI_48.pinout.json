@@ -38,7 +38,7 @@
     "reset_enabled": false,
     "script_ref": [
         "common.alpaca",
-        "TAC_FTDI_48.alpaca"
+        "common-battery-edl.alpaca"
     ],
     "usb_descriptor": "ALPACA-LITE MTP8850",
     "pins": [
@@ -419,6 +419,18 @@
         {
             "name": "fastbootRepeatDelay",
             "default_value": "30"
+        },
+        {
+            "name": "batteryResetHold",
+            "default_value": "14000"
+        },
+        {
+            "name": "batteryResetPress",
+            "default_value": "1300"
+        },
+        {
+            "name": "batteryResetRelease",
+            "default_value": "6000"
         }
     ]
 }

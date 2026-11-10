@@ -38,7 +38,7 @@
     "reset_enabled": false,
     "script_ref": [
         "common.alpaca",
-        "TAC_FTDI_51.alpaca"
+        "common-usb3456.alpaca"
     ],
     "usb_descriptor": "ALPACA-LITE GLYMUR COB QCB",
     "pins": [
@@ -406,6 +406,18 @@
         },
         {
             "name": "fastbootRepeatDelay",
+            "default_value": "30"
+        },
+        {
+            "name": "powerOffHold",
+            "default_value": "500"
+        },
+        {
+            "name": "batteryDelay",
+            "default_value": "900"
+        },
+        {
+            "name": "usbDelay",
             "default_value": "30"
         }
     ]

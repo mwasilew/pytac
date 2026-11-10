@@ -42,7 +42,7 @@
     "script_ref": [
         "common.alpaca",
         "common-no-usb1.alpaca",
-        "TAC_FTDI_65.alpaca"
+        "common-battery-edl.alpaca"
     ],
     "usb_descriptor": "ALPACA-LITE MTP8975",
     "pins": [
@@ -263,6 +263,18 @@
         {
             "name": "usbDelay",
             "default_value": "30"
+        },
+        {
+            "name": "batteryResetHold",
+            "default_value": "14000"
+        },
+        {
+            "name": "batteryResetPress",
+            "default_value": "1300"
+        },
+        {
+            "name": "batteryResetRelease",
+            "default_value": "6000"
         }
     ]
 }

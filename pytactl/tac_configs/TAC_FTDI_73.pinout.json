@@ -17,7 +17,7 @@
     "chip_count": 1,
     "script_ref": [
         "common.alpaca",
-        "TAC_FTDI_73.alpaca"
+        "common-battery-edl.alpaca"
     ],
     "bus": [
         {
@@ -259,6 +259,18 @@
         {
             "name": "fastbootRepeatDelay",
             "default_value": "30"
+        },
+        {
+            "name": "batteryResetHold",
+            "default_value": "14000"
+        },
+        {
+            "name": "batteryResetPress",
+            "default_value": "1300"
+        },
+        {
+            "name": "batteryResetRelease",
+            "default_value": "6000"
         }
     ]
 }

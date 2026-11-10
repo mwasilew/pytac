@@ -16,7 +16,7 @@
     "script_ref": [
         "common.alpaca",
         "common-no-usb1.alpaca",
-        "TAC_PSOC_66.alpaca"
+        "common-battery-edl.alpaca"
     ],
     "supportedFirmwareVer": [
         17
@@ -248,6 +248,18 @@
         {
             "name": "usbDelay",
             "default_value": "30"
+        },
+        {
+            "name": "batteryResetHold",
+            "default_value": "14000"
+        },
+        {
+            "name": "batteryResetPress",
+            "default_value": "1300"
+        },
+        {
+            "name": "batteryResetRelease",
+            "default_value": "6000"
         }
     ]
 }

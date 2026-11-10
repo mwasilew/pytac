@@ -103,7 +103,9 @@ COMMON_SCRIPT = "common.alpaca"
 SHARED_SCRIPTS = {
     COMMON_SCRIPT: (
         "common-no-usb1.alpaca",
+        "common-usb3456.alpaca",
         "common-uefi-pkey-confirm.alpaca",
+        "common-battery-edl.alpaca",
     ),
 }
 SHARED_SCRIPT_NAMES = tuple(

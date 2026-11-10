@@ -1,0 +1,31 @@
+// Add-on to common.alpaca for MTPs that reset themselves while volume-down
+// is held: bootToBatteryEDL enters EDL, and batteryReset restarts the board,
+// without cutting the battery. Listed after common.alpaca in "script_ref".
+//
+// Both hold voldn for $batteryResetHold, press the power key for
+// $batteryResetPress and release voldn $batteryResetRelease later.
+
+def bootToBatteryEDL()
+	logComment ====== bootToBatteryEDL start ======
+	pedl 1
+	voldn 1
+	delay $batteryResetHold
+	pkey 1
+	delay $batteryResetPress
+	pkey 0
+	delay $batteryResetRelease
+	voldn 0
+	pedl 0
+	logComment ====== bootToBatteryEDL finish ======
+
+def batteryReset()
+	logComment ====== batteryReset start ======
+	pedl 0
+	voldn 1
+	delay $batteryResetHold
+	pkey 1
+	delay $batteryResetPress
+	pkey 0
+	delay $batteryResetRelease
+	voldn 0
+	logComment ====== batteryReset finish ======
