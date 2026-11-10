@@ -6,6 +6,11 @@
             "fingerprint": "sha256:96abe032a859e181129fe2258b7056d48a90a0fdea2606b146fd504dccbd1c3f",
             "upstream_commit": "954c804e694e8b7d7e8fc71c105d66c3f4742d20"
         },
+        "TAC_FTDI_52.pinout.json": {
+            "note": "pytactl marks the battery pin inverted (initial_value false) and has powerOffTheDevice drive battery 1 and powerOnTheDevice battery 0, as on every other board. Upstream drives the same levels with the polarity reversed in the script instead. The levels driven are unchanged.",
+            "fingerprint": "sha256:b732a98b1645f4b6901316bbd8d7a3a713dfe07082818fa3bb8d0e39a201fded",
+            "upstream_commit": "1c3bea5e0c76b744f8470023432f58bed9727ec9"
+        },
         "TAC_FTDI_67.pinout.json": {
             "note": "pytactl corrects sumxs2 to smuxs2 in enS230; the board has no sumxs2 pin, so upstream's enS230 cannot run.",
             "fingerprint": "sha256:743326c268e96ba383c30e5c2aba1707ab257be39af8ff839a6b4a9a6afffd6d",
