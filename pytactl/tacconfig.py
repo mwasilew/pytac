@@ -405,6 +405,32 @@ def read_shared_scripts():
     return shared
 
 
+def script_behaviour(config):
+    """What a loaded config's script does: ``{function: [statement, ...]}``.
+
+    Variables are replaced by their values in the config, and comments,
+    ``logComment`` lines, spacing and ``delay 0`` are left out, with a run of
+    literal delays added up into one: two configs whose functions drive the
+    same pins with the same timings compare equal, however the script is laid
+    out or split between files.
+    """
+    values = {
+        variable["name"]: str(variable.get("default_value"))
+        for variable in config.get("variables", [])
+        if variable.get("name")
+    }
+    script = re.sub(
+        r"\$(\w+)(?!\w)",
+        lambda match: values.get(match.group(1), match.group(0)),
+        config.get("script", ""),
+    )
+    return {
+        name: [s for s in _statements(text) if s != "delay 0"]
+        for name, text in split_functions(script)
+        if name is not None
+    }
+
+
 def factor_script(pinout, script_name, shared_scripts):
     """Split a config's script into shared scripts and what is left.
 

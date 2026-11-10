@@ -671,18 +671,25 @@ def board_script(values=None, drop=(), extra=""):
     return "\n\n".join(blocks) + "\n" + extra
 
 
-def behaviour(pinout):
-    """``{function: statements}`` with variables substituted and no-op
-    ``delay 0`` left out: what the board does, however it is written."""
-    values = {v["name"]: v["default_value"] for v in pinout.get("variables", [])}
-    script = re.sub(
-        r"\$(\w+)(?!\w)", lambda m: values.get(m.group(1), m.group(0)), pinout["script"]
-    )
-    return {
-        name: [s for s in tacconfig._statements(text) if s != "delay 0"]
-        for name, text in tacconfig.split_functions(script)
-        if name
+behaviour = tacconfig.script_behaviour
+
+
+def test_script_behaviour_ignores_layout():
+    """Variables, comments, logComment, delay 0 and split delays do not change
+    what a script does."""
+    plain = {"script": "def a()\n\tpkey 1\n\tdelay 800\n\tpkey 0\n"}
+    dressed = {
+        "script": (
+            "// header\ndef a() \n\tlogComment start\n\tpkey 1 // press\n"
+            "\tdelay $press\n\tdelay 300\n\tdelay $extra\n\tpkey 0\n"
+        ),
+        "variables": [
+            {"name": "press", "default_value": "500"},
+            {"name": "extra", "default_value": "0"},
+        ],
     }
+    assert tacconfig.script_behaviour(plain) == {"a": ["pkey 1", "delay 800", "pkey 0"]}
+    assert tacconfig.script_behaviour(dressed) == tacconfig.script_behaviour(plain)
 
 
 def factor_and_load(tmp_path, pinout):

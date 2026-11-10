@@ -40,6 +40,15 @@ pull request summary.
 
 The provenance annotation ("source") is excluded from the comparison: it names
 the upstream commit, which moves with every upstream push, config change or not.
+
+Configs are compared as pytactl loads them, with the script assembled from the
+.alpaca files the config lists, so the comparison is not affected by how the
+script is split between the shared scripts and the board's own file. Upstream
+configs are converted the way the vendored ones were, so the split is the same
+on both sides unless what the script does differs. Each difference names the
+script functions whose behaviour it changes, timings included. --apply writes
+a new difference in the same layout, removing a board's own .alpaca file when
+it no longer needs one.
 """
 
 import argparse
@@ -263,7 +272,30 @@ def describe(vendored, upstream, error=None):
         for key in set(comparable(vendored)) | set(comparable(upstream))
         if vendored.get(key) != upstream.get(key)
     )
-    return "changed: " + ", ".join(f"`{field}`" for field in fields)
+    detail = "changed: " + ", ".join(f"`{field}`" for field in fields)
+    if {"script", "variables"} & set(fields):
+        functions = changed_functions(vendored, upstream)
+        if functions:
+            detail += " (" + ", ".join(f"`{name}`" for name in functions) + ")"
+        elif "script" in fields:
+            detail += " (layout only)"
+    return detail
+
+
+def changed_functions(vendored, upstream):
+    """Script functions that behave differently in the two configs.
+
+    Timings are variables in the configs pytactl writes, so a changed delay
+    shows up as a changed variable; naming the functions it affects says what
+    the change does.
+    """
+    if "script" not in vendored or "script" not in upstream:
+        return []
+    old = tacconfig.script_behaviour(vendored)
+    new = tacconfig.script_behaviour(upstream)
+    return sorted(
+        name for name in set(old) | set(new) if old.get(name) != new.get(name)
+    )
 
 
 def dangling_catalog_entries(configs):
