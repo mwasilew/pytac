@@ -368,11 +368,10 @@ def parse_common_script(script):
     A slot is either a statement the board's function must have, or, for a
     ``delay $name`` line, a ``(name, optional)`` pair the board's function may
     fill with any delay: ``optional`` slots (marked ``// optional``) may also
-    be absent, which is a delay of 0. Each variable may appear only once, so
-    that what a board needs for one function never conflicts with another.
+    be absent, which is a delay of 0. A variable may appear in several slots,
+    and then stands for the same delay in each of them.
     """
     functions = {}
-    seen = set()
     for name, text in split_functions(script):
         if name is None:
             continue
@@ -386,13 +385,7 @@ def parse_common_script(script):
             if not match:
                 slots.append(statement)
                 continue
-            variable = match.group(1)
-            if variable in seen:
-                raise ConfigFormatError(
-                    f"common script uses ${variable} more than once"
-                )
-            seen.add(variable)
-            slots.append((variable, "optional" in comment))
+            slots.append((match.group(1), "optional" in comment))
         functions[name] = slots
     return functions
 
@@ -401,25 +394,33 @@ def parse_common_script(script):
 _KEEP = object()
 
 
-def _match_function(slots, statements, fixed):
+def _match_function(slots, statements, fixed, bound=None):
     """Match a board's function against a common one.
 
-    Returns ``{variable: value}`` making the common function do what the
-    board's does, or ``None`` if it cannot. ``value`` is the delay as a string,
-    or `_KEEP` where the board already delays by that variable. ``fixed`` maps
-    the variables the board's script uses to their declared values: those
-    cannot take another value without changing what the script does.
+    Returns the bindings ``{variable: value}`` making the common function do
+    what the board's does, ``bound`` included, or ``None`` if it cannot.
+    ``value`` is the delay as a string, or `_KEEP` where the board already
+    delays by that variable. ``fixed`` maps the variables the board's script
+    uses to their declared values: those cannot take another value without
+    changing what the script does. ``bound`` holds the bindings made for other
+    functions, which a variable used here too has to agree with.
     """
 
-    def walk(i, j):
+    def walk(i, j, bindings):
         if i == len(slots):
-            return {} if j == len(statements) else None
+            return bindings if j == len(statements) else None
         slot = slots[i]
         if isinstance(slot, str):
             if j < len(statements) and statements[j] == slot:
-                return walk(i + 1, j + 1)
+                return walk(i + 1, j + 1, bindings)
             return None
         variable, optional = slot
+
+        def bind(value, next_j):
+            if variable in bindings and bindings[variable] != value:
+                return None
+            return walk(i + 1, next_j, {**bindings, variable: value})
+
         if j < len(statements) and statements[j].startswith("delay "):
             argument = statements[j][6:]
             value = None
@@ -428,16 +429,14 @@ def _match_function(slots, statements, fixed):
             elif argument.isdigit() and fixed.get(variable, argument) == argument:
                 value = argument
             if value is not None:
-                rest = walk(i + 1, j + 1)
-                if rest is not None:
-                    return {variable: value, **rest}
+                result = bind(value, j + 1)
+                if result is not None:
+                    return result
         if optional and fixed.get(variable, "0") == "0":
-            rest = walk(i + 1, j)
-            if rest is not None:
-                return {variable: "0", **rest}
+            return bind("0", j)
         return None
 
-    return walk(0, 0)
+    return walk(0, 0, dict(bound or {}))
 
 
 def read_shared_scripts():
@@ -511,20 +510,21 @@ def factor_script(pinout, script_name, shared_scripts):
     }
     fixed = {name: declared.get(name) for name in _VARIABLE_USE.findall(script)}
 
-    def match(function, slots):
+    def match(function, slots, bound):
         if function not in board_functions:
             return None
-        return _match_function(slots, _statements(board_functions[function]), fixed)
+        statements = _statements(board_functions[function])
+        return _match_function(slots, statements, fixed, bound)
 
     common_name, *variant_names = shared_scripts
     common = parse_common_script(shared_scripts[common_name])
     matched = set()
     bindings = {}
     for function, slots in common.items():
-        binding = match(function, slots)
+        binding = match(function, slots, bindings)
         if binding is not None:
             matched.add(function)
-            bindings.update(binding)
+            bindings = binding
 
     used = [common_name]
     for variant_name in variant_names:
@@ -535,15 +535,16 @@ def factor_script(pinout, script_name, shared_scripts):
             )
         if matched & set(variant):
             continue
-        variant_bindings = [
-            match(function, slots) for function, slots in variant.items()
-        ]
-        if None in variant_bindings:
+        trial = bindings
+        for function, slots in variant.items():
+            trial = match(function, slots, trial)
+            if trial is None:
+                break
+        if trial is None:
             continue
         used.append(variant_name)
         matched |= set(variant)
-        for binding in variant_bindings:
-            bindings.update(binding)
+        bindings = trial
 
     if len(matched) < MIN_COMMON_FUNCTIONS:
         board_script = _join([text for _, text in blocks])

@@ -877,11 +877,23 @@ def test_write_pinout_removes_a_stale_own_script(tmp_path):
     assert not (tmp_path / "TAC_FTDI_999.alpaca").exists()
 
 
-def test_common_script_variables_are_unique():
-    with pytest.raises(tacconfig.ConfigFormatError, match=r"\$edl"):
-        tacconfig.parse_common_script(
-            "def a()\n\tdelay $edl\n\ndef b()\n\tdelay $edl\n"
-        )
+def test_shared_variable_takes_one_value():
+    """A variable used in several shared functions stands for the same delay in
+    each: a board using two different delays there cannot share both."""
+    slots = tacconfig.parse_common_script(
+        "def a()\n\tpkey 1\n\tdelay $hold\n\ndef b()\n\tpedl 1\n\tdelay $hold\n"
+    )
+    first = tacconfig._match_function(slots["a"], ["pkey 1", "delay 900"], {})
+    assert first == {"hold": "900"}
+    assert tacconfig._match_function(slots["b"], ["pedl 1", "delay 900"], {}, first)
+    assert (
+        tacconfig._match_function(slots["b"], ["pedl 1", "delay 500"], {}, first)
+        is None
+    )
+    kept = tacconfig._match_function(slots["a"], ["pkey 1", "delay $hold"], {})
+    assert (
+        tacconfig._match_function(slots["b"], ["pedl 1", "delay 900"], {}, kept) is None
+    )
 
 
 def test_inline_script_still_loads(tmp_path):
