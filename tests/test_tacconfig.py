@@ -634,6 +634,52 @@ def test_missing_script_file_is_a_format_error(tmp_path):
         tacconfig.convert_file(str(tmp_path / "TAC_FTDI_999.pinout.json"))
 
 
+def test_split_functions():
+    script = "// header\n\ndef a()\n\tpkey 1\n\n\ndef b() \n\tdelay 5\n"
+    assert tacconfig.split_functions(script) == [
+        (None, "// header"),
+        ("a", "def a()\n\tpkey 1"),
+        ("b", "def b() \n\tdelay 5"),
+    ]
+    assert tacconfig.split_functions("") == []
+
+
+def test_merge_scripts_overrides_and_omits():
+    """A later script replaces a function in place, adds new ones at the end,
+    and omitted functions are dropped."""
+    base = "def a()\n\tpkey 1\n\ndef b()\n\tpkey 0\n\ndef c()\n\tdelay 1\n"
+    overlay = "def b()\n\tvoldn 1\n\ndef d()\n\tvolup 1\n"
+
+    merged = tacconfig.merge_scripts([base, overlay], omit=["c"])
+
+    assert merged == ("def a()\n\tpkey 1\n\ndef b()\n\tvoldn 1\n\ndef d()\n\tvolup 1\n")
+
+
+def test_merge_scripts_returns_a_single_script_unchanged():
+    script = "def a()\r\n\tpkey 1"
+    assert tacconfig.merge_scripts([script]) == script
+    assert tacconfig.merge_scripts([]) == ""
+
+
+def test_script_ref_list_is_merged_on_load(tmp_path):
+    pinout, _ = tacconfig.split_configuration(LEGACY_CONFIG)
+    del pinout["script"]
+    pinout[tacconfig.SCRIPT_REF] = ["common.alpaca", "TAC_FTDI_999.alpaca"]
+    pinout[tacconfig.SCRIPT_OMIT] = ["bootToEDL"]
+    (tmp_path / "common.alpaca").write_text(
+        "def powerOn()\n\tbattery 0\n\ndef bootToEDL()\n\tpedl 1\n"
+    )
+    (tmp_path / "TAC_FTDI_999.alpaca").write_text("def powerOn()\n\tbattery 1\n")
+    path = tmp_path / "TAC_FTDI_999.pinout.json"
+    write_json(path, pinout)
+
+    loaded = tacconfig.convert_file(str(path))
+
+    assert loaded["script"] == "def powerOn()\n\tbattery 1\n"
+    assert tacconfig.SCRIPT_REF not in loaded
+    assert tacconfig.SCRIPT_OMIT not in loaded
+
+
 def test_copy_config_renames_the_script_with_the_pinout(tmp_path):
     source = tmp_path / "source"
     destination = tmp_path / "destination"

@@ -23,6 +23,12 @@ script is one long line and any edit to it diffs as a change to the whole
 script; in a file of its own it diffs line by line. See `write_pinout`. A
 pinout file with the script inline, as upstream writes it, loads unchanged.
 
+``script_ref`` may also list several files, which are combined into one
+script: a function defined in a later file replaces the one of the same name
+from an earlier file, and ``script_omit`` names functions to leave out. That
+lets boards share a common script and keep only what is particular to them in
+a file of their own. See `merge_scripts`.
+
 pytactl drives hardware and has no UI, so it wants the pinout half and nothing
 else. This module is the Python port of the upstream split (see
 ``PlatformConfiguration::splitConfiguration``/``mergeConfiguration`` and the
@@ -65,11 +71,18 @@ SOURCE_FIELD = "source"
 PINOUT_REF = "pinout_ref"
 PIN_REF = "ref"
 
-# Link from a pinout file to the file holding its Alpaca script, written in
+# Link from a pinout file to the file(s) holding its Alpaca script, written in
 # place of an inline "script" (see write_pinout). pytactl's own addition, like
-# SOURCE_FIELD: upstream keeps the script inline.
+# SOURCE_FIELD: upstream keeps the script inline. Either one file name or a
+# list of them; see merge_scripts for how a list is combined.
 SCRIPT_REF = "script_ref"
 SCRIPT_EXTENSION = ".alpaca"
+
+# Functions to leave out of a script assembled from several files: a shared
+# file can define functions that a particular board does not support.
+SCRIPT_OMIT = "script_omit"
+
+_FUNCTION_DEF = re.compile(r"^def\s+(\w+)")
 
 # Fields that identify a physical pin. Written flat into the pinout file and
 # inside the overlay's "ref" object. FTDI uses all three, PSOC/PIC32CX only
@@ -164,24 +177,77 @@ def read_script(path):
         return handle.read()
 
 
+def split_functions(script):
+    """Split an Alpaca script into ``[(name, text), ...]``, one per function.
+
+    A function runs from its ``def`` line up to the next one; ``text`` keeps
+    its lines as written, without trailing blank lines. Anything before the
+    first ``def`` (comments, in practice) comes first, with ``name`` ``None``.
+    """
+    blocks = []
+    name, lines = None, []
+
+    def flush():
+        if name is not None or any(text.strip() for text in lines):
+            blocks.append((name, "\n".join(lines).rstrip()))
+
+    for line in script.splitlines():
+        match = _FUNCTION_DEF.match(line)
+        if match:
+            flush()
+            name, lines = match.group(1), []
+        lines.append(line)
+    flush()
+    return blocks
+
+
+def merge_scripts(scripts, omit=()):
+    """Combine Alpaca scripts into one, the way a ``script_ref`` list is.
+
+    Functions are taken in order; one defined again in a later script replaces
+    the earlier definition, keeping its place. Functions named in ``omit`` are
+    left out. A single script with nothing to omit is returned unchanged.
+    """
+    if len(scripts) == 1 and not omit:
+        return scripts[0]
+    merged = {}
+    for index, script in enumerate(scripts):
+        for position, (name, text) in enumerate(split_functions(script)):
+            # Text outside any function is kept, once per file it appears in.
+            merged[name if name is not None else (index, position)] = text
+    blocks = [text for name, text in merged.items() if name not in omit]
+    return "\n\n".join(blocks) + "\n" if blocks else ""
+
+
+def _script_refs(config):
+    refs = config[SCRIPT_REF]
+    return [refs] if isinstance(refs, str) else list(refs)
+
+
 def inline_script(config, directory):
     """Return ``config`` with its ``script_ref`` replaced by the script itself.
 
-    The referenced file is read from ``directory`` (only its base name is used,
-    as with ``pinout_ref``). A config with no ``script_ref`` is returned as is.
-    Raises `ConfigFormatError` if the script file cannot be read.
+    The referenced file(s) are read from ``directory`` (only the base name is
+    used, as with ``pinout_ref``) and combined with `merge_scripts`, leaving
+    out the functions named in ``script_omit``. A config with no
+    ``script_ref`` is returned as is. Raises `ConfigFormatError` if a script
+    file cannot be read.
     """
     if SCRIPT_REF not in config:
         return config
-    script_path = os.path.join(directory, os.path.basename(config[SCRIPT_REF]))
-    try:
-        script = read_script(script_path)
-    except OSError as error:
-        raise ConfigFormatError(
-            f"cannot read the script file {config[SCRIPT_REF]!r} the config "
-            f"refers to: {error}"
-        ) from error
-    return _replace_key(config, SCRIPT_REF, "script", script)
+    scripts = []
+    for ref in _script_refs(config):
+        script_path = os.path.join(directory, os.path.basename(ref))
+        try:
+            scripts.append(read_script(script_path))
+        except OSError as error:
+            raise ConfigFormatError(
+                f"cannot read the script file {ref!r} the config refers to: {error}"
+            ) from error
+    script = merge_scripts(scripts, config.get(SCRIPT_OMIT, ()))
+    inlined = _replace_key(config, SCRIPT_REF, "script", script)
+    inlined.pop(SCRIPT_OMIT, None)
+    return inlined
 
 
 def load_pinout(path):
