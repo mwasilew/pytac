@@ -38,6 +38,11 @@ else. This module is the Python port of the upstream split (see
 itself instead of waiting for the split to land upstream, and can consume
 upstream's ``*.pinout.json`` files unchanged once it does.
 
+Pin polarity differs too: in a config pytactl writes, a pin marked
+``inverted`` is driven at the inverse of the commanded level, while upstream
+only draws the pin's indicator inverted (except on FT232H). Upstream's flags
+are cleared on conversion; see `clear_upstream_inversion`.
+
 The one place the conversion is deliberately more than a mechanical split is
 `drop_shadowed_pins`: ``enabled`` is a UI field and does not survive into the
 pinout file, but pytactl needs it, so the decision it used to drive at load time
@@ -280,11 +285,46 @@ def inline_script(config, directory):
     return inlined
 
 
+# Platforms whose upstream driver drives a pin marked "inverted" at the
+# inverse level. Everywhere else upstream draws the pin's indicator LED
+# inverted and drives the commanded level as is.
+_UPSTREAM_DRIVES_INVERTED = ("FT232H",)
+
+
+def clear_upstream_inversion(config):
+    """Return ``config`` with the ``inverted`` flags upstream only displays.
+
+    In a config pytactl writes, ``inverted`` means the pin is driven at the
+    inverse of the commanded level. Upstream's flag means that only on FT232H;
+    on the other platforms it only inverts the indicator LED in the QTAC UI,
+    while the commanded level is driven as is. Clearing it there keeps what is
+    driven unchanged. Configs for FT232H are returned as they are.
+    """
+    if config.get("platform_type") in _UPSTREAM_DRIVES_INVERTED or not any(
+        pin.get("inverted") for pin in config.get("pins", [])
+    ):
+        return config
+    cleared = dict(config)
+    cleared["pins"] = [
+        dict(pin, inverted=False) if pin.get("inverted") else pin
+        for pin in config["pins"]
+    ]
+    return cleared
+
+
 def load_pinout(path):
-    """Load a JSON config file, with any external script read back inline."""
+    """Load a JSON config file, with any external script read back inline.
+
+    A config pytactl did not write - one without ``script_ref``, as upstream
+    writes them - has its display-only ``inverted`` flags cleared (see
+    `clear_upstream_inversion`), so that it drives the same levels in pytactl
+    as in QTAC.
+    """
     with open(path) as handle:
         config = json.load(handle)
     if isinstance(config, dict):
+        if SCRIPT_REF not in config:
+            config = clear_upstream_inversion(config)
         config = inline_script(config, os.path.dirname(path))
     return config
 

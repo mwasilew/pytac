@@ -220,7 +220,7 @@
         },
         {
             "command": "battery",
-            "inverted": true,
+            "inverted": false,
             "pin_number": 4
         },
         {

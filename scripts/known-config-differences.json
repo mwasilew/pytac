@@ -8,7 +8,7 @@
         },
         "TAC_FTDI_67.pinout.json": {
             "note": "pytactl corrects sumxs2 to smuxs2 in enS230; the board has no sumxs2 pin, so upstream's enS230 cannot run.",
-            "fingerprint": "sha256:b788c0948119e604105a618e50b49f3a1638e1cdfd0f1ff2f0a0f9cfac2fde05",
+            "fingerprint": "sha256:743326c268e96ba383c30e5c2aba1707ab257be39af8ff839a6b4a9a6afffd6d",
             "upstream_commit": "1c3bea5e0c76b744f8470023432f58bed9727ec9"
         },
         "TAC_FTDI_72.pinout.json": {
@@ -18,22 +18,22 @@
         },
         "TAC_FTDI_77.pinout.json": {
             "note": "pytactl drops the second FPPower 0 from powerOnTheDevice; it repeats the first and does nothing.",
-            "fingerprint": "sha256:1fc5fbe72e48c94f67124e6a8b21edee289c94fe292683ca48a80c7f2a2ddae2",
+            "fingerprint": "sha256:b8484bb5c220e1d52a26fd01f59d1491883aa728269a915eee5cf3aa2c833e4a",
             "upstream_commit": "1c3bea5e0c76b744f8470023432f58bed9727ec9"
         },
         "TAC_PSOC_35.pinout.json": {
             "note": "pytactl 8f2c5eb shortens powerDelay from 18000 to 2000 ms; the upstream value makes RB1 reboot after it has started booting.",
-            "fingerprint": "sha256:5fd1b396dbcb06d44e863bf571e954370dd7d2ac09b041af39ef20b40b0cf0d5",
+            "fingerprint": "sha256:6439fcdd11637eda8ed5c6982db09498fe624be954a80357c02bd053ac088aa5",
             "upstream_commit": "03cddde77c5c72ef2b0753683e8ad4f8fc5ce6f8"
         },
         "TAC_PSOC_7.pinout.json": {
             "note": "pytactl holds pedl for 10 s more in bootToEDL. Upstream releases it with the power key, 2.2 s after power is applied; an RB3Gen2 cut off while running can take over 7 s to power on (PON by SYSOK after a UVLO), so it samples pedl released and boots from storage instead of EDL.",
-            "fingerprint": "sha256:c181f6c78150b13811ca058ec79f009a60f8653fb839bec026ae468fed7234fa",
+            "fingerprint": "sha256:8f074e55bc4be3308863e51809e6fd62c73feeb12b1028c6b63f6ab045e37338",
             "upstream_commit": "5260b251751adac25ad87b2bce363a8e9d516bb5"
         },
         "TAC_PSOC_82.pinout.json": {
             "note": "Upstream 98aa34e adds firmware version 19 to supportedFirmwareVer.",
-            "fingerprint": "sha256:33d9d02c40a4f39064c2ff6a1fd745d8df02211fe2cea4b1e4bde021cad8c2bd",
+            "fingerprint": "sha256:1945c2549316240c723d2728b588292c80663c2ed083f8d51ce59082863158ec",
             "upstream_commit": "03cddde77c5c72ef2b0753683e8ad4f8fc5ce6f8"
         }
     }

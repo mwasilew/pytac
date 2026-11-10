@@ -148,7 +148,7 @@
             "command": "usb3456",
             "initial_value": false,
             "input": false,
-            "inverted": true,
+            "inverted": false,
             "pin_number": "2",
             "priority": 2
         },
@@ -308,7 +308,7 @@
             "command": "usb1",
             "initial_value": false,
             "input": false,
-            "inverted": true,
+            "inverted": false,
             "pin_number": "6",
             "priority": 2
         },
@@ -358,7 +358,7 @@
             "command": "usb0",
             "initial_value": false,
             "input": false,
-            "inverted": true,
+            "inverted": false,
             "pin_number": "7",
             "priority": 2
         }

@@ -98,7 +98,7 @@
             "command": "usb1",
             "initial_value": false,
             "initialization_priority": 2,
-            "inverted": true,
+            "inverted": false,
             "pin_number": "36"
         },
         {
@@ -162,7 +162,7 @@
             "command": "battery",
             "initial_value": false,
             "initialization_priority": 2,
-            "inverted": true,
+            "inverted": false,
             "pin_number": "53"
         },
         {
@@ -178,7 +178,7 @@
             "command": "usb0",
             "initial_value": false,
             "initialization_priority": 2,
-            "inverted": true,
+            "inverted": false,
             "pin_number": "55"
         }
     ],

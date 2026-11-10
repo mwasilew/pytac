@@ -98,7 +98,7 @@
             "command": "battery",
             "initial_value": false,
             "input": false,
-            "inverted": true,
+            "inverted": false,
             "pin_number": "1",
             "priority": 2
         },
@@ -238,7 +238,7 @@
             "command": "usb1",
             "initial_value": false,
             "input": false,
-            "inverted": true,
+            "inverted": false,
             "pin_number": "6",
             "priority": 2
         },

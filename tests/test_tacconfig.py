@@ -971,6 +971,34 @@ def test_script_ref_list_is_merged_on_load(tmp_path):
     assert tacconfig.SCRIPT_OMIT not in loaded
 
 
+def test_upstream_inversion_is_cleared_on_load(tmp_path):
+    """Upstream only displays "inverted" on FTDI boards; the level driven is
+    the commanded one, which is what a cleared flag means in pytactl."""
+    pinout, _ = tacconfig.split_configuration(LEGACY_CONFIG)
+    pinout["pins"][0]["inverted"] = True
+    path = tmp_path / "TAC_FTDI_999.pinout.json"
+    write_json(path, pinout)
+
+    loaded = tacconfig.convert_file(str(path))
+
+    assert not any(pin.get("inverted") for pin in loaded["pins"])
+
+
+def test_upstream_inversion_is_kept_where_upstream_drives_it():
+    config = {"platform_type": "FT232H", "pins": [{"command": "a", "inverted": True}]}
+    assert tacconfig.clear_upstream_inversion(config) is config
+
+
+def test_inversion_in_a_config_pytactl_wrote_is_kept(tmp_path):
+    pinout, _ = tacconfig.split_configuration(LEGACY_CONFIG)
+    pinout["pins"][0]["inverted"] = True
+    tacconfig.write_pinout(str(tmp_path), "TAC_FTDI_999.pinout.json", pinout)
+
+    loaded = tacconfig.convert_file(str(tmp_path / "TAC_FTDI_999.pinout.json"))
+
+    assert loaded["pins"][0]["inverted"] is True
+
+
 def test_copy_config_renames_the_script_with_the_pinout(tmp_path):
     source = tmp_path / "source"
     destination = tmp_path / "destination"

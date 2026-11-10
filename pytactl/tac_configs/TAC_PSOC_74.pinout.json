@@ -88,7 +88,7 @@
         {
             "command": "usb1",
             "initial_value": false,
-            "inverted": true,
+            "inverted": false,
             "pin_number": "36",
             "classic_action": "TAC_USB1_DIS",
             "initialization_priority": 2
@@ -160,7 +160,7 @@
         {
             "command": "battery",
             "initial_value": false,
-            "inverted": true,
+            "inverted": false,
             "pin_number": "53",
             "classic_action": "TAC_POWER_OFF",
             "initialization_priority": 2
@@ -176,7 +176,7 @@
         {
             "command": "usb0",
             "initial_value": false,
-            "inverted": true,
+            "inverted": false,
             "pin_number": "55",
             "classic_action": "TAC_USB0_DIS",
             "initialization_priority": 2

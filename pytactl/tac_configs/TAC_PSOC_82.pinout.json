@@ -35,7 +35,7 @@
             "command": "uim1",
             "initial_value": false,
             "initialization_priority": -1,
-            "inverted": true,
+            "inverted": false,
             "pin_number": "16"
         },
         {
@@ -43,7 +43,7 @@
             "command": "uim2",
             "initial_value": false,
             "initialization_priority": -1,
-            "inverted": true,
+            "inverted": false,
             "pin_number": "18"
         },
         {
@@ -179,7 +179,7 @@
             "command": "battery",
             "initial_value": false,
             "initialization_priority": 2,
-            "inverted": true,
+            "inverted": false,
             "pin_number": "53"
         },
         {
@@ -195,7 +195,7 @@
             "command": "usb0",
             "initial_value": false,
             "initialization_priority": 2,
-            "inverted": true,
+            "inverted": false,
             "pin_number": "55"
         }
     ],

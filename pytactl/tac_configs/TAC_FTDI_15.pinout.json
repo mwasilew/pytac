@@ -77,7 +77,7 @@
             "command": "battery",
             "initial_value": true,
             "input": false,
-            "inverted": true,
+            "inverted": false,
             "pin_number": "1",
             "priority": 1
         },
