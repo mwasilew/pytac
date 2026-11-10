@@ -331,11 +331,12 @@ def prepared_configs(tmp_path_factory):
     # Mirror what "installconfigs" does: install the bundled FTDI Alpaca-Lite
     # config as default.pinout.json, the file FtdiBoard falls back to when a
     # device's USB descriptor matches no catalog entry.
-    shutil.copy(
+    tacconfig.copy_config(
         os.path.join(
             pytactl.PACKAGE_TAC_CONFIG_PATH, pytactl.BUNDLED_DEFAULT_CONFIG_FILENAME
         ),
-        os.path.join(dst, pytactl.DEFAULT_CONFIG_FILENAME),
+        str(dst),
+        pytactl.DEFAULT_CONFIG_FILENAME,
     )
 
     for path in discover_configs():
@@ -343,7 +344,7 @@ def prepared_configs(tmp_path_factory):
         with open(path) as handle:
             cfg = json.load(handle)
         platform_type = cfg.get("platform_type", "")
-        shutil.copy(path, os.path.join(dst, base))
+        tacconfig.copy_config(path, str(dst))
         dispatch = dispatch_for(platform_type)
 
         if dispatch == "PSOC":

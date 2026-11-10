@@ -1,0 +1,4 @@
+# Alpaca scripts are stored byte for byte as upstream writes them, CRLF line
+# endings included: scripts/sync_upstream_configs.py fingerprints them. Keep git
+# from converting line endings on checkout or commit; diffs stay textual.
+*.alpaca -text

@@ -5,7 +5,6 @@
 plugged-in device onto the correct board implementation."""
 
 import json
-import shutil
 import sys
 import types
 from unittest.mock import MagicMock
@@ -13,7 +12,7 @@ from unittest.mock import MagicMock
 import pytest
 from conftest import config_path_or_skip, make_usb_device
 
-from pytactl import debugboard
+from pytactl import debugboard, tacconfig
 
 Board = debugboard.Board
 
@@ -147,7 +146,7 @@ def _prepare_pic32cx_config_dir(tmp_path, usb_descriptor):
     Skips the calling test when the config is not available (it is part of the
     upstream config set, not of this repository).
     """
-    shutil.copy(config_path_or_skip(PIC32CX_CONFIG), tmp_path / PIC32CX_CONFIG)
+    tacconfig.copy_config(config_path_or_skip(PIC32CX_CONFIG), str(tmp_path))
     catalog = {
         "catalog": [
             {

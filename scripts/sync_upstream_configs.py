@@ -84,6 +84,28 @@ def load_json(path):
         return json.load(handle)
 
 
+def load_config(path):
+    """A vendored or converted file, or ``None`` when it does not exist.
+
+    A pinout file's script is read back in from its ``.alpaca`` file, so that
+    the comparison and the fingerprint cover the script but not where it is
+    stored.
+    """
+    if not os.path.exists(path):
+        return None
+    if path.endswith(tacconfig.PINOUT_EXTENSION):
+        return tacconfig.load_pinout(path)
+    return load_json(path)
+
+
+def remove_config(directory, name):
+    """Delete a vendored pinout file and the script file beside it."""
+    os.remove(os.path.join(directory, name))
+    script = os.path.join(directory, tacconfig.script_filename_for(name))
+    if os.path.exists(script):
+        os.remove(script)
+
+
 def write_json(path, obj):
     with open(path, "w") as handle:
         json.dump(obj, handle, indent=4)
@@ -158,8 +180,8 @@ def compare(configs, converted, names=None):
     for name in sorted(names):
         vendored_path = os.path.join(configs, name)
         upstream_path = os.path.join(converted, name)
-        vendored = load_json(vendored_path) if os.path.exists(vendored_path) else None
-        upstream = load_json(upstream_path) if os.path.exists(upstream_path) else None
+        vendored = load_config(vendored_path)
+        upstream = load_config(upstream_path)
         if (
             vendored is None
             or upstream is None
@@ -468,11 +490,14 @@ def main():
         if args.apply:
             for name in new:
                 upstream_path = os.path.join(converted, name)
-                vendored_path = os.path.join(args.configs, name)
-                if os.path.exists(upstream_path):
-                    write_json(vendored_path, load_json(upstream_path))
+                if not os.path.exists(upstream_path):
+                    remove_config(args.configs, name)
+                elif name == DEVICE_LIST:
+                    write_json(
+                        os.path.join(args.configs, name), load_json(upstream_path)
+                    )
                 else:
-                    os.remove(vendored_path)
+                    tacconfig.copy_config(upstream_path, args.configs)
                 known_entries.pop(name, None)
             for name in stale:
                 del known_entries[name]

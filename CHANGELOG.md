@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The Alpaca script of a config is kept in a file of its own,
+  `TAC_<CHIP>_<ID>.alpaca`, beside the `*.pinout.json` that names it in a new
+  `script_ref` field, so that a script change diffs line by line instead of as
+  a change to one long JSON string. The bundled configs, `installconfigs` and
+  `convertconfigs` use this layout. Configs with the script inline, as
+  upstream writes them, still load.
+
 ## [3.2] - 2026-10-19
 
 ### Added

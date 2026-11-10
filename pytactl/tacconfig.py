@@ -16,6 +16,13 @@ splits that into two sibling files:
 * ``TAC_<CHIP>_<ID>.tcnf`` - a slim UI overlay that points back at its pinout
   file through ``pinout_ref`` and carries only UI concerns.
 
+pytactl goes one step further when it writes a pinout file: the Alpaca script
+is moved out into a sibling ``TAC_<CHIP>_<ID>.alpaca`` file, referenced from the
+pinout through ``script_ref``. JSON has no multi-line strings, so an inline
+script is one long line and any edit to it diffs as a change to the whole
+script; in a file of its own it diffs line by line. See `write_pinout`. A
+pinout file with the script inline, as upstream writes it, loads unchanged.
+
 pytactl drives hardware and has no UI, so it wants the pinout half and nothing
 else. This module is the Python port of the upstream split (see
 ``PlatformConfiguration::splitConfiguration``/``mergeConfiguration`` and the
@@ -57,6 +64,12 @@ SOURCE_FIELD = "source"
 # uses to join back to a hardware pin.
 PINOUT_REF = "pinout_ref"
 PIN_REF = "ref"
+
+# Link from a pinout file to the file holding its Alpaca script, written in
+# place of an inline "script" (see write_pinout). pytactl's own addition, like
+# SOURCE_FIELD: upstream keeps the script inline.
+SCRIPT_REF = "script_ref"
+SCRIPT_EXTENSION = ".alpaca"
 
 # Fields that identify a physical pin. Written flat into the pinout file and
 # inside the overlay's "ref" object. FTDI uses all three, PSOC/PIC32CX only
@@ -126,6 +139,81 @@ def pinout_filename_for(filename):
     base, _, extension = name.rpartition(".")
     # rpartition returns ("", "", name) when there is no dot at all.
     return (base or extension) + PINOUT_EXTENSION
+
+
+def script_filename_for(filename):
+    """Return the script file name for a pinout file name.
+
+    ``TAC_FTDI_15.pinout.json`` -> ``TAC_FTDI_15.alpaca``.
+    """
+    return pinout_filename_for(filename)[: -len(PINOUT_EXTENSION)] + SCRIPT_EXTENSION
+
+
+def _replace_key(config, old, new, value):
+    """Copy of ``config`` with key ``old`` replaced by ``new`` = ``value``,
+    in the same position, so a rewritten file keeps its key order."""
+    return {
+        (new if key == old else key): (value if key == old else item)
+        for key, item in config.items()
+    }
+
+
+def read_script(path):
+    """Read an Alpaca script file exactly as stored, line endings included."""
+    with open(path, newline="") as handle:
+        return handle.read()
+
+
+def inline_script(config, directory):
+    """Return ``config`` with its ``script_ref`` replaced by the script itself.
+
+    The referenced file is read from ``directory`` (only its base name is used,
+    as with ``pinout_ref``). A config with no ``script_ref`` is returned as is.
+    Raises `ConfigFormatError` if the script file cannot be read.
+    """
+    if SCRIPT_REF not in config:
+        return config
+    script_path = os.path.join(directory, os.path.basename(config[SCRIPT_REF]))
+    try:
+        script = read_script(script_path)
+    except OSError as error:
+        raise ConfigFormatError(
+            f"cannot read the script file {config[SCRIPT_REF]!r} the config "
+            f"refers to: {error}"
+        ) from error
+    return _replace_key(config, SCRIPT_REF, "script", script)
+
+
+def load_pinout(path):
+    """Load a JSON config file, with any external script read back inline."""
+    with open(path) as handle:
+        config = json.load(handle)
+    if isinstance(config, dict):
+        config = inline_script(config, os.path.dirname(path))
+    return config
+
+
+def write_pinout(directory, name, pinout):
+    """Write ``pinout`` as ``directory/name``, its script in a sibling file.
+
+    The script goes to `script_filename_for` ``name``, byte for byte (line
+    endings included), and the pinout file records that name in ``script_ref``
+    where ``script`` was. A pinout without a ``script`` key is written as is.
+    """
+    if "script" in pinout:
+        script_name = script_filename_for(name)
+        with open(os.path.join(directory, script_name), "w", newline="") as handle:
+            handle.write(pinout["script"])
+        pinout = _replace_key(pinout, "script", SCRIPT_REF, script_name)
+    _write_json(os.path.join(directory, name), pinout)
+
+
+def copy_config(path, directory, name=None):
+    """Copy the pinout file ``path`` into ``directory``, script file and all.
+
+    ``name`` renames the copy (its script file follows the new name).
+    """
+    write_pinout(directory, name or os.path.basename(path), load_pinout(path))
 
 
 def pin_key(key_holder):
@@ -409,10 +497,12 @@ def convert_file(path):
       the same directory and merged, so the overlay's pin enablement is applied;
     * a legacy combined ``*.tcnf`` - converted in memory.
 
+    A script kept in a separate file (``script_ref``) is read back in, so the
+    returned config always carries it inline as ``script``.
+
     Raises `ConfigFormatError` if the file is none of these.
     """
-    with open(path) as handle:
-        config = json.load(handle)
+    config = load_pinout(path)
 
     if is_pinout(config):
         return config
@@ -421,8 +511,7 @@ def convert_file(path):
         pinout_path = os.path.join(
             os.path.dirname(path), os.path.basename(config[PINOUT_REF])
         )
-        with open(pinout_path) as handle:
-            pinout = json.load(handle)
+        pinout = load_pinout(pinout_path)
         if not is_pinout(pinout):
             raise ConfigFormatError(
                 f"{pinout_path} is referenced as a pinout file but its "
@@ -482,7 +571,8 @@ def convert_directory(
     Script indentation is normalised to tabs on the way through, so that what
     is written out is what `Board.parse_script` requires.
 
-    Each ``*.tcnf`` (legacy or already split) becomes a ``*.pinout.json``.
+    Each ``*.tcnf`` (legacy or already split) becomes a ``*.pinout.json`` with
+    its script in a sibling ``*.alpaca`` file (see `write_pinout`).
     ``*.pinout.json`` files that have no ``*.tcnf`` beside them are converted
     too, so a directory of upstream pinout files can be installed directly.
     A ``devicelist.json`` in ``source`` is copied over with its ``configPath``
@@ -536,8 +626,7 @@ def convert_directory(
         name = os.path.basename(path)
         pinout_name = pinout_filename_for(name)
         try:
-            with open(path) as handle:
-                config = json.load(handle)
+            config = load_pinout(path)
             if is_pinout(config):
                 pinout, overlay = config, None
             elif is_overlay(config):
@@ -569,7 +658,7 @@ def convert_directory(
             pinout = annotate_source(pinout, source_info, name)
 
         if not dry_run:
-            _write_json(os.path.join(destination, pinout_name), pinout)
+            write_pinout(destination, pinout_name, pinout)
             if write_overlay and overlay is not None:
                 _write_json(os.path.join(destination, name), overlay)
         logger.debug("Converted %s -> %s", name, pinout_name)

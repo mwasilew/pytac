@@ -38,6 +38,12 @@ this is that configuration written out. `pytactl installconfigs` copies it into
 the directory it populates as `default.pinout.json`; here it keeps its own name,
 and `devicelist.json` entries with no config of their own point straight at it.
 
+Each config's Alpaca script lives in a file of its own beside it
+(`TAC_FTDI_15.pinout.json` -> `TAC_FTDI_15.alpaca`, named by the config's
+`script_ref`), so that a script change diffs line by line. Edit the `.alpaca`
+file directly. It holds the script exactly as upstream has it, line endings
+included; `.gitattributes` keeps git from converting them.
+
 Scripts in these configs indent statements with a single tab, which is what the
 parser requires. `convertconfigs` re-indents on import and logs each file it
 touches; three upstream configs (`TAC_FTDI_51`, `TAC_FTDI_52`, `TAC_FTDI_77`)

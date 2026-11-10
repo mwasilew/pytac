@@ -36,7 +36,7 @@
     "platform_id": 42,
     "platform_type": "FTDI",
     "reset_enabled": false,
-    "script": "",
+    "script_ref": "TAC_FTDI_42.alpaca",
     "usb_descriptor": "ALPACA-LITE SMART LABEL",
     "pins": [
         {

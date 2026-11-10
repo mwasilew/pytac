@@ -142,6 +142,15 @@ every config in that PR), which is what `installconfigs` and `convertconfigs` ap
 does not have to wait for the split to land upstream and will consume upstream's `.pinout.json`
 files unchanged once it does.
 
+pytactl writes one more file than upstream: the Alpaca script is moved out of the pinout file into
+a sibling `TAC_<CHIP>_<ID>.alpaca`, which the pinout names in `script_ref`. Inline, the script is
+a single JSON string, so editing one line of it shows in `git diff` as a change to the whole
+script; in its own file it diffs line by line. The bundled configs, `installconfigs` and
+`convertconfigs` all use this layout, and the script file is kept byte for byte (CRLF line
+endings included). A pinout file with the script inline, as upstream writes it, still loads, and
+so does a config set installed by an earlier pytactl. Copy a config together with its `.alpaca`
+file.
+
 All three shapes are accepted wherever a single config file is given with `--config-file-path`: a
 `.pinout.json`, a split `.tcnf` (its `pinout_ref` sibling is loaded from the same directory), or a
 legacy combined `.tcnf`, which is converted in memory.

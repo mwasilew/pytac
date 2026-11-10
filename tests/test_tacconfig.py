@@ -589,6 +589,85 @@ def test_normalize_script_indentation(name, script, expected, changed):
     assert tacconfig.normalize_script_indentation(script) == (expected, changed)
 
 
+def test_script_filename_for():
+    assert tacconfig.script_filename_for("TAC_FTDI_15.pinout.json") == (
+        "TAC_FTDI_15.alpaca"
+    )
+    assert tacconfig.script_filename_for("TAC_FTDI_15.tcnf") == "TAC_FTDI_15.alpaca"
+
+
+@pytest.mark.parametrize(
+    "script",
+    ["def powerOn()\n\tbattery 0\n", "def powerOn()\r\n\tbattery 0", ""],
+)
+def test_write_pinout_moves_script_to_its_own_file(tmp_path, script):
+    """The script is written byte for byte beside the pinout, referenced in the
+    same position, and read back inline."""
+    pinout = {"format": tacconfig.PINOUT_FORMAT, "script": script, "pins": []}
+
+    tacconfig.write_pinout(str(tmp_path), "TAC_FTDI_999.pinout.json", pinout)
+
+    written = json.loads((tmp_path / "TAC_FTDI_999.pinout.json").read_text())
+    assert list(written) == ["format", tacconfig.SCRIPT_REF, "pins"]
+    assert written[tacconfig.SCRIPT_REF] == "TAC_FTDI_999.alpaca"
+    assert (tmp_path / "TAC_FTDI_999.alpaca").read_bytes() == script.encode()
+    path = str(tmp_path / "TAC_FTDI_999.pinout.json")
+    assert tacconfig.load_pinout(path) == pinout
+    assert tacconfig.convert_file(path)["script"] == script
+
+
+def test_inline_script_still_loads(tmp_path):
+    """A pinout with its script inline, as upstream writes it, loads as is."""
+    pinout, _ = tacconfig.split_configuration(LEGACY_CONFIG)
+    path = tmp_path / "TAC_FTDI_999.pinout.json"
+    write_json(path, pinout)
+
+    assert tacconfig.convert_file(str(path))["script"] == LEGACY_CONFIG["script"]
+
+
+def test_missing_script_file_is_a_format_error(tmp_path):
+    pinout, _ = tacconfig.split_configuration(LEGACY_CONFIG)
+    tacconfig.write_pinout(str(tmp_path), "TAC_FTDI_999.pinout.json", pinout)
+    (tmp_path / "TAC_FTDI_999.alpaca").unlink()
+
+    with pytest.raises(tacconfig.ConfigFormatError, match="TAC_FTDI_999.alpaca"):
+        tacconfig.convert_file(str(tmp_path / "TAC_FTDI_999.pinout.json"))
+
+
+def test_copy_config_renames_the_script_with_the_pinout(tmp_path):
+    source = tmp_path / "source"
+    destination = tmp_path / "destination"
+    source.mkdir()
+    destination.mkdir()
+    pinout, _ = tacconfig.split_configuration(LEGACY_CONFIG)
+    tacconfig.write_pinout(str(source), "TAC_FTDI_999.pinout.json", pinout)
+
+    tacconfig.copy_config(
+        str(source / "TAC_FTDI_999.pinout.json"),
+        str(destination),
+        "default.pinout.json",
+    )
+
+    assert sorted(os.listdir(destination)) == ["default.alpaca", "default.pinout.json"]
+    loaded = tacconfig.convert_file(str(destination / "default.pinout.json"))
+    assert loaded["script"] == LEGACY_CONFIG["script"]
+
+
+def test_convert_directory_reconverts_its_own_output(tmp_path):
+    """Converting a directory pytactl wrote, in place, changes nothing."""
+    source = tmp_path / "configurations"
+    source.mkdir()
+    write_json(source / "TAC_FTDI_999.tcnf", LEGACY_CONFIG)
+    destination = tmp_path / "installed"
+    tacconfig.convert_directory(str(source), str(destination), annotate=False)
+    before = {p.name: p.read_bytes() for p in destination.iterdir()}
+
+    tacconfig.convert_directory(str(destination), annotate=False)
+
+    assert {p.name: p.read_bytes() for p in destination.iterdir()} == before
+    assert "TAC_FTDI_999.alpaca" in before
+
+
 def test_convert_directory_re_indents_scripts_with_tabs(tmp_path):
     """TAC_FTDI_51, TAC_FTDI_52 and TAC_FTDI_77 each indent two lines with
     spaces upstream; importing them yields configs pytactl will load."""
@@ -600,10 +679,29 @@ def test_convert_directory_re_indents_scripts_with_tabs(tmp_path):
 
     tacconfig.convert_directory(str(source), str(destination))
 
-    script = json.loads((destination / "TAC_FTDI_999.pinout.json").read_text())[
-        "script"
-    ]
+    script = (destination / "TAC_FTDI_999.alpaca").read_text()
     assert script == "def powerOn()\n\tbattery 1\n\tpkey 1\n"
+
+
+@requires_bundled_configs
+def test_bundled_scripts_are_kept_in_their_own_files():
+    """Shipped configs reference their script rather than holding it inline, so
+    that a script change diffs line by line, and every script file belongs to a
+    config."""
+    directory = pytactl.PACKAGE_TAC_CONFIG_PATH
+    referenced = set()
+    for path in glob.glob(os.path.join(directory, "*" + tacconfig.PINOUT_EXTENSION)):
+        with open(path) as handle:
+            config = json.load(handle)
+        name = os.path.basename(path)
+        assert "script" not in config, f"{name} holds its script inline"
+        assert config[tacconfig.SCRIPT_REF] == tacconfig.script_filename_for(name)
+        referenced.add(config[tacconfig.SCRIPT_REF])
+    on_disk = {
+        os.path.basename(path)
+        for path in glob.glob(os.path.join(directory, "*" + tacconfig.SCRIPT_EXTENSION))
+    }
+    assert on_disk == referenced
 
 
 @requires_bundled_configs
@@ -614,8 +712,7 @@ def test_bundled_scripts_are_tab_indented():
     for path in glob.glob(
         os.path.join(pytactl.PACKAGE_TAC_CONFIG_PATH, "*" + tacconfig.PINOUT_EXTENSION)
     ):
-        with open(path) as handle:
-            script = json.load(handle)["script"]
+        script = tacconfig.load_pinout(path)["script"]
         for number, line in enumerate(script.splitlines(), 1):
             if not line.strip():
                 continue

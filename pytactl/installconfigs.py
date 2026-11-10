@@ -3,7 +3,6 @@
 
 import logging
 import os
-import shutil
 import sys
 import tempfile
 from urllib.parse import urlparse
@@ -171,7 +170,7 @@ def install_configs(
     if not result["device_list"]:
         logger.warning("devicelist.json not found in repository; not installed")
 
-    shutil.copyfile(_BUNDLED_DEFAULT, os.path.join(local_path, DEFAULT_CONFIG_FILENAME))
+    tacconfig.copy_config(_BUNDLED_DEFAULT, local_path, DEFAULT_CONFIG_FILENAME)
     logger.info("Installed %s", DEFAULT_CONFIG_FILENAME)
 
     print(f"Installed {len(result['converted']) + 1} TAC config files to {local_path}")

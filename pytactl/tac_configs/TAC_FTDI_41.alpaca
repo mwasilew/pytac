@@ -1,0 +1,175 @@
+def powerOffTheDevice() 
+	logComment ====== powerOffTheDevice sequence start ======
+
+	power 1
+	usb0 1
+	//usb1 1
+
+	logComment ====== powerOffTheDevice sequence finish ======
+
+def powerOnTheDevice()
+	logComment ====== powerOnTheDevice sequence start ======
+
+	delay 500
+	power 0
+	delay 900
+	usb0 0
+	//usb1 0
+	delay 30
+
+	logComment ====== powerOnTheDevice sequence finish ======
+
+def powerOff()
+	logComment ====== powerOff start ======
+
+	powerOffTheDevice
+
+	pkey 0
+	spkey 0
+	volup 0
+	voldn 0
+	sresn 0	
+
+	fssel 0
+	jtagsel 0
+	uartsel 0
+	usbsel 0
+	pedl 0
+	sedl 0
+
+	logComment ====== powerOff finish ======
+
+def fpowerOn()
+	logComment ====== fpowerOn start ======
+
+	powerOff
+	
+	fssel 0
+	jtagsel 0
+	uartsel 0
+	usbsel 0
+	
+	powerOnTheDevice
+
+	pkey 1
+	delay 800
+	pkey 0
+
+	logComment ====== fpowerOn finish ======
+
+def spowerOn()
+	logComment ====== spowerOn start ======
+
+	powerOff
+	
+	fssel 1
+	jtagsel 1
+	uartsel 1
+	usbsel 1
+	
+	powerOnTheDevice
+
+	spkey 1
+	delay 800
+	spkey 0
+
+	logComment ====== spowerOn finish ======
+
+def bootToAPQEDL()
+	logComment ====== bootToAPQEDL start ======
+
+	powerOffTheDevice
+
+	pkey 0
+	volup 0
+	voldn 0
+
+	pedl 1
+
+	powerOnTheDevice
+
+	pkey 1
+	delay 1300
+	pkey 0
+
+	pedl 0
+
+	logComment ====== bootToAPQEDL finish ======
+
+
+def bootToSDXEDL()
+	logComment ====== bootToSDXEDL start ======
+
+	powerOffTheDevice
+
+	spkey 0
+	//sresn 0
+
+	fssel 1
+	jtagsel 1
+	uartsel 1
+	usbsel 1
+	sedl 1
+
+	powerOnTheDevice
+
+	spkey 1
+	delay 1500
+	spkey 0
+
+	sedl 0
+
+	logComment ====== bootToSDXEDL finish ======
+
+
+def bootToUEFI()
+	logComment ====== bootToUEFIMenu start ======
+
+	powerOffTheDevice
+
+	// Put buttons in a set state
+	pkey 0
+	volup 1
+	voldn 0
+
+	pedl 0
+
+	powerOnTheDevice
+
+	pkey 1
+	delay 8000
+	pkey 0
+	volup 0
+	delay 12
+	pkey 1
+
+	pkey 0
+	volup 0
+
+	logComment ====== bootToUEFIMenu finish ======
+
+def bootToFastboot()
+	logComment ====== bootToFastboot start ======
+
+	powerOffTheDevice
+
+	pkey 0
+	volup 0
+	voldn 1
+
+	pedl 0
+
+	powerOnTheDevice
+
+	pkey 1
+	delay 800
+	pkey 0
+
+	delay 1500
+	voldn 0
+	delay 30
+	voldn 1
+
+	voldn 0
+
+	logComment ====== bootToFastboot finished ======
