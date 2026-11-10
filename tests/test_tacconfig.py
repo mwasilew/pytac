@@ -817,6 +817,24 @@ def test_variant_is_used_when_the_board_matches_it(tmp_path):
     assert behaviour(loaded) == behaviour(pinout)
 
 
+def test_variants_combine(tmp_path):
+    """A board can match several variants; each replaces its own functions."""
+    script = re.sub(r"\n\tusb1 [01]", "", board_script()).replace(
+        "\tpkey 1\n\tvolup 1\n\tpkey 0\n\tvolup 0", "\tpkey 1\n\tpkey 0\n\tvolup 0"
+    )
+    pinout = {"script": script}
+
+    written, loaded = factor_and_load(tmp_path, pinout)
+
+    assert written[tacconfig.SCRIPT_REF] == [
+        tacconfig.COMMON_SCRIPT,
+        "common-no-usb1.alpaca",
+        "common-uefi-pkey-confirm.alpaca",
+    ]
+    assert not (tmp_path / "TAC_FTDI_999.alpaca").exists()
+    assert behaviour(loaded) == behaviour(pinout)
+
+
 def test_consecutive_delays_are_added_up(tmp_path):
     script = board_script({"uefi": "8000"}).replace(
         "\tdelay 8000\n", "\tdelay 5000\n\tdelay 3000\n"

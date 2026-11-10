@@ -93,7 +93,11 @@ _FUNCTION_DEF = re.compile(r"^def\s+(\w+)")
 # SHARED_SCRIPT_DIR; a config directory written by pytactl holds a copy of each
 # shared script its configs use.
 COMMON_SCRIPT = "common.alpaca"
-SHARED_SCRIPTS = (COMMON_SCRIPT, "common-no-usb1.alpaca")
+SHARED_SCRIPTS = (
+    COMMON_SCRIPT,
+    "common-no-usb1.alpaca",
+    "common-uefi-pkey-confirm.alpaca",
+)
 SHARED_SCRIPT_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "tac_configs"
 )

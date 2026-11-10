@@ -154,9 +154,12 @@ Most boards run the same sequences with different timings, so their scripts are 
 |------|----------|
 | `common.alpaca` | `powerOffTheDevice`, `powerOnTheDevice`, `powerOff`, `powerOn`, `bootToEDL`, `bootToSecondaryEDL`, `bootToUEFI` and `bootToFastboot` for the common battery/USB/key/EDL wiring. Every delay is a variable (`$edl`, `$powerKeyPress`, ...), set per board in the pinout's `variables`. |
 | `common-no-usb1.alpaca` | `powerOffTheDevice` and `powerOnTheDevice` for boards that switch only `usb0`. |
+| `common-uefi-pkey-confirm.alpaca` | `bootToUEFI` for boards that confirm the UEFI menu with the power key alone. |
 | `TAC_<CHIP>_<ID>.alpaca` | The board's own functions: ones beyond the common set, and common ones the board does differently. |
 
-The files in `script_ref` are combined in order, and a function defined in a later file replaces
+The `common-*.alpaca` variants each redefine some common functions with the same variables, for a
+difference several boards share; a board can use more than one. The files in `script_ref` are
+combined in order, and a function defined in a later file replaces
 the one of the same name from an earlier file. `script_omit` lists common functions the board does
 not have. A board whose wiring shares little with the common script keeps its whole script in its
 own file:

@@ -1,0 +1,23 @@
+// Variant of common.alpaca for boards that confirm the UEFI menu with the
+// power key alone: the second press of bootToUEFI leaves volup released.
+// Listed after common.alpaca in "script_ref", it replaces the function below
+// and takes the same variables.
+
+def bootToUEFI()
+	logComment ====== bootToUEFI start ======
+	powerOffTheDevice
+	pkey 0
+	volup 1
+	voldn 0
+	pedl 0
+	powerOnTheDevice
+	delay $uefiPowerOnDelay // optional
+	pkey 1
+	delay $uefi
+	pkey 0
+	volup 0
+	delay $uefiRepeatDelay
+	pkey 1
+	pkey 0
+	volup 0
+	logComment ====== bootToUEFI finish ======

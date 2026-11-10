@@ -18,7 +18,7 @@
     "script_ref": [
         "common.alpaca",
         "common-no-usb1.alpaca",
-        "TAC_FTDI_78.alpaca"
+        "common-uefi-pkey-confirm.alpaca"
     ],
     "script_omit": [
         "bootToSecondaryEDL"
@@ -403,6 +403,18 @@
         {
             "name": "usbDelay",
             "default_value": "30"
+        },
+        {
+            "name": "uefiPowerOnDelay",
+            "default_value": "0"
+        },
+        {
+            "name": "uefi",
+            "default_value": "8000"
+        },
+        {
+            "name": "uefiRepeatDelay",
+            "default_value": "12"
         }
     ]
 }

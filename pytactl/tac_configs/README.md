@@ -40,8 +40,11 @@ and `devicelist.json` entries with no config of their own point straight at it.
 
 Alpaca scripts are kept in `.alpaca` files, listed in each config's
 `script_ref`, so that a script change diffs line by line. Boards with the
-common wiring share `common.alpaca` (and `common-no-usb1.alpaca` when they
-switch only `usb0`), with every delay a variable in the config's `variables`;
+common wiring share `common.alpaca`, plus the `common-*.alpaca` variants that
+redefine some of its functions for a difference several boards share
+(`common-no-usb1.alpaca` for boards switching only `usb0`,
+`common-uefi-pkey-confirm.alpaca` for boards confirming the UEFI menu with the
+power key alone), with every delay a variable in the config's `variables`;
 the board's own `TAC_<CHIP>_<ID>.alpaca` holds only what is particular to it.
 See "Alpaca scripts" in the top-level README for how the files combine.
 
