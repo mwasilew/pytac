@@ -43,8 +43,10 @@ Alpaca scripts are kept in `.alpaca` files, listed in each config's
 common wiring share `common.alpaca`, plus the `common-*.alpaca` overlays that
 redefine some of its functions for a difference several boards share, or add
 functions several boards have (see the table in the top-level README), with
-every delay a variable in the config's `variables`;
-the board's own `TAC_<CHIP>_<ID>.alpaca` holds only what is particular to it.
+every delay a variable in the config's `variables`. Boards wired differently
+share a family script instead (`battery-pkey.alpaca`, `pwr-off.alpaca`,
+`pic32cx.alpaca`). The board's own `TAC_<CHIP>_<ID>.alpaca` holds only what
+is particular to it.
 See "Alpaca scripts" in the top-level README for how the files combine.
 
 * To change a board's timing, change its variable in the `.pinout.json`.

@@ -107,6 +107,9 @@ SHARED_SCRIPTS = {
         "common-uefi-pkey-confirm.alpaca",
         "common-battery-edl.alpaca",
     ),
+    "battery-pkey.alpaca": (),
+    "pwr-off.alpaca": (),
+    "pic32cx.alpaca": (),
 }
 SHARED_SCRIPT_NAMES = tuple(
     name for base, overlays in SHARED_SCRIPTS.items() for name in (base, *overlays)

@@ -157,7 +157,8 @@ pytactl keeps the Alpaca script out of the pinout file, in `.alpaca` files the p
 `script_ref`. Inline, the script is a single JSON string, so editing one line of it shows in
 `git diff` as a change to the whole script; in a file of its own it diffs line by line.
 
-Most boards run the same sequences with different timings, so their scripts are shared:
+Most boards run the same sequences as other boards wired alike, with different timings, so their
+scripts are shared:
 
 | File | Contents |
 |------|----------|
@@ -166,11 +167,17 @@ Most boards run the same sequences with different timings, so their scripts are 
 | `common-usb3456.alpaca` | `powerOffTheDevice` and `powerOnTheDevice` for boards that also switch `usb3456`. |
 | `common-uefi-pkey-confirm.alpaca` | `bootToUEFI` for boards that confirm the UEFI menu with the power key alone. |
 | `common-battery-edl.alpaca` | Adds `bootToBatteryEDL` and `batteryReset`, for MTPs that reset while volume-down is held. |
+| `battery-pkey.alpaca` | The functions of boards whose power functions switch the battery and the power key together (CSM). |
+| `pwr-off.alpaca` | The functions of boards powered through a single `pwr_off` line (RIDE MICRO 4.0, IQ-9075/IQ-8275 EVKs). |
+| `pic32cx.alpaca` | The functions of the PIC32CX boards. |
 | `TAC_<CHIP>_<ID>.alpaca` | The board's own functions: ones beyond the common set, and common ones the board does differently. |
 
 The `common-*.alpaca` overlays each redefine some common functions with the same variables, for a
 difference several boards share, or add functions several boards have; a board can use more than
-one. The files in `script_ref` are
+one. Boards wired differently from the common script share a family script of their own instead
+(`battery-pkey.alpaca`, `pwr-off.alpaca`, `pic32cx.alpaca`), which a board lists first in place of
+`common.alpaca`. A shared script may use a variable in several functions, where they share a
+timing. The files in `script_ref` are
 combined in order, and a function defined in a later file replaces
 the one of the same name from an earlier file. `script_omit` lists common functions the board does
 not have. A board whose wiring shares little with the common script keeps its whole script in its

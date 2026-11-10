@@ -14,6 +14,7 @@
     "platform_type": "PSOC",
     "reset_enabled": true,
     "script_ref": [
+        "battery-pkey.alpaca",
         "TAC_PSOC_14.alpaca"
     ],
     "supportedFirmwareVer": [
@@ -190,5 +191,30 @@
             "pin_number": "56"
         }
     ],
-    "variables": []
+    "variables": [
+        {
+            "name": "powerOffHold",
+            "default_value": "500"
+        },
+        {
+            "name": "powerOnDelay",
+            "default_value": "900"
+        },
+        {
+            "name": "powerKeyDelay",
+            "default_value": "500"
+        },
+        {
+            "name": "edl",
+            "default_value": "3000"
+        },
+        {
+            "name": "eud",
+            "default_value": "3000"
+        },
+        {
+            "name": "uefi",
+            "default_value": "2100"
+        }
+    ]
 }

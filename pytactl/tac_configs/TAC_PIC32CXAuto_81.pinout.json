@@ -14,7 +14,7 @@
     "platform_type": "PIC32CXAuto",
     "reset_enabled": false,
     "script_ref": [
-        "TAC_PIC32CXAuto_81.alpaca"
+        "pic32cx.alpaca"
     ],
     "usb_descriptor": "TORO",
     "pins": [
@@ -246,6 +246,10 @@
         {
             "default_value": "10000",
             "name": "uefi"
+        },
+        {
+            "name": "powerOffHold",
+            "default_value": "900"
         }
     ]
 }

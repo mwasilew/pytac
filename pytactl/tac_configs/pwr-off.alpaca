@@ -1,0 +1,70 @@
+// Alpaca script shared by the boards powered through a single pwr_off line,
+// with sw_dnld/ss_force_edl boot straps (RIDE MICRO 4.0, the IQ-9075 and
+// IQ-8275 EVKs). Listed first in a config's "script_ref", like common.alpaca,
+// with the board's own script, if any, after it; functions the board lacks
+// are named in "script_omit".
+//
+// Every delay is a variable, set per board in the pinout's "variables".
+// $powerOffHold is how long the board stays off before it is powered again,
+// in every function that power-cycles it.
+
+def powerOn()
+	logComment ====== powerOn start ======
+	pwr_off 0
+	logComment ====== powerOn finish ======
+
+def powerOff()
+	logComment ====== powerOff start ======
+	pwr_off 1
+	logComment ====== powerOff finish ======
+
+def reset()
+	logComment ====== reset start ======
+	powerOff
+	delay $powerOffHold
+	powerOn
+	logComment ====== reset finish ======
+
+def bootToEDL()
+	logComment ====== bootToEDL start ======
+	powerOff
+	sw_dnld 1
+	ss_force_edl 1
+	delay $powerOffHold
+	powerOn
+	delay $edl
+	sw_dnld 0
+	ss_force_edl 0
+	logComment ====== bootToEDL finish ======
+
+def bootToSecondaryEDL()
+	logComment ====== bootToSecondaryEDL start ======
+	powerOff
+	ss_force_edl 1
+	delay $powerOffHold
+	powerOn
+	delay $secondaryEdl
+	ss_force_edl 0
+	logComment ====== bootToSecondaryEDL finish ======
+
+def bootToUEFI()
+	logComment ====== bootToUEFI start ======
+	reset
+	kpd_pwr 0
+	uefi 1
+	kpd_pwr 1
+	delay $uefi
+	kpd_pwr 0
+	uefi 0
+	logComment ====== bootToUEFI finish ======
+
+def bootToFastboot()
+	logComment ====== bootToFastboot start ======
+	powerOff
+	delay $powerOffHold
+	usb2 1
+	delay $fastbootUsbDelay
+	powerOn
+	delay $fastboot
+	usb2 0
+	logComment ====== bootToFastboot finish ======

@@ -37,7 +37,11 @@
     "platform_type": "FTDI",
     "reset_enabled": false,
     "script_ref": [
-        "TAC_FTDI_15.alpaca"
+        "battery-pkey.alpaca"
+    ],
+    "script_omit": [
+        "powerOff",
+        "powerOn"
     ],
     "usb_descriptor": "ALPACA-LITE CSM DEBUG BOARD",
     "pins": [
@@ -202,5 +206,38 @@
             "priority": 0
         }
     ],
-    "variables": []
+    "variables": [
+        {
+            "name": "powerOffHold",
+            "default_value": "500"
+        },
+        {
+            "name": "powerOnDelay",
+            "default_value": "900"
+        },
+        {
+            "name": "edl",
+            "default_value": "3000"
+        },
+        {
+            "name": "eud",
+            "default_value": "3000"
+        },
+        {
+            "name": "uefi",
+            "default_value": "2000"
+        },
+        {
+            "name": "fastbootPress",
+            "default_value": "8000"
+        },
+        {
+            "name": "fastboot",
+            "default_value": "8000"
+        },
+        {
+            "name": "fastbootRepeatDelay",
+            "default_value": "30"
+        }
+    ]
 }

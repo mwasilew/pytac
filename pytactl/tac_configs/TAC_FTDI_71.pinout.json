@@ -16,7 +16,7 @@
     "reset_enabled": false,
     "chip_count": 1,
     "script_ref": [
-        "TAC_FTDI_71.alpaca"
+        "pwr-off.alpaca"
     ],
     "bus": [
         {
@@ -362,5 +362,30 @@
             "priority": -1
         }
     ],
-    "variables": []
+    "variables": [
+        {
+            "name": "powerOffHold",
+            "default_value": "1500"
+        },
+        {
+            "name": "edl",
+            "default_value": "5000"
+        },
+        {
+            "name": "secondaryEdl",
+            "default_value": "5000"
+        },
+        {
+            "name": "uefi",
+            "default_value": "8000"
+        },
+        {
+            "name": "fastbootUsbDelay",
+            "default_value": "500"
+        },
+        {
+            "name": "fastboot",
+            "default_value": "8000"
+        }
+    ]
 }

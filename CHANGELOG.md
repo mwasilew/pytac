@@ -19,7 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   power key alone) or add functions several boards have (battery-backed EDL
   and reset); a board's own `TAC_<CHIP>_<ID>.alpaca` holds only the functions
   particular to it, and `script_omit` lists the common ones it does not have.
-  39 of the 58 bundled configs share the common script, 33 of them entirely. The bundled configs, `installconfigs` and `convertconfigs` use
+  Groups of boards wired differently share a family script of their own
+  (`battery-pkey.alpaca`, `pwr-off.alpaca`, `pic32cx.alpaca`). 49 of the 58
+  bundled configs take their functions from shared scripts, 42 of them
+  entirely. The bundled configs, `installconfigs` and `convertconfigs` use
   this layout, and every bundled board drives its pins with the same timings
   as before. Configs with the script inline, as upstream writes them, still
   load.
