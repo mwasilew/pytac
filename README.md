@@ -142,6 +142,15 @@ every config in that PR), which is what `installconfigs` and `convertconfigs` ap
 does not have to wait for the split to land upstream and will consume upstream's `.pinout.json`
 files unchanged once it does.
 
+All three shapes are accepted wherever a single config file is given with `--config-file-path`: a
+`.pinout.json`, a split `.tcnf` (its `pinout_ref` sibling is loaded from the same directory), or a
+legacy combined `.tcnf`, which is converted in memory.
+
+One thing does not survive the split unaided: `enabled` is a UI field, but several configs wire
+the same command name to two physical pins and disable one of them. The conversion therefore
+drops a disabled pin when an enabled pin claims the same command, so the command keeps driving the
+line it drove before.
+
 ### Alpaca scripts
 
 pytactl keeps the Alpaca script out of the pinout file, in `.alpaca` files the pinout lists in
@@ -179,14 +188,14 @@ methods one spelling (`bootToFastBoot` becomes `bootToFastboot`, `bootToUEFIMenu
 does a config set installed by an earlier pytactl. Copy a config together with the `.alpaca` files
 it lists.
 
-All three shapes are accepted wherever a single config file is given with `--config-file-path`: a
-`.pinout.json`, a split `.tcnf` (its `pinout_ref` sibling is loaded from the same directory), or a
-legacy combined `.tcnf`, which is converted in memory.
+### Pin polarity
 
-One thing does not survive the split unaided: `enabled` is a UI field, but several configs wire
-the same command name to two physical pins and disable one of them. The conversion therefore
-drops a disabled pin when an enabled pin claims the same command, so the command keeps driving the
-line it drove before.
+A pin marked `"inverted": true` is driven at the inverse of the commanded level, initial value
+included, so that scripts read the same on every board (`battery 1` disconnects the battery)
+whichever level a board's circuit needs. Upstream's flag means something else: on FTDI, PSOC and
+PIC32CX boards QTAC only draws the pin's indicator inverted and drives the commanded level as is.
+Configs pytactl did not write (inline script, as upstream writes them) therefore have the flag
+cleared when they are loaded or converted, except for FT232H boards, where upstream drives it too.
 
 ### Script indentation
 

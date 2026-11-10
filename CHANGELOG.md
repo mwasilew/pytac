@@ -28,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   every other board uses. Conversion renames them in upstream configs too.
 - The `logComment` messages of the shared functions are the same on every
   board that uses them.
+- A pin marked `inverted` in a config pytactl writes is driven at the inverse
+  of the commanded level. Upstream's flag only inverts the indicator in the
+  QTAC UI on FTDI, PSOC and PIC32CX boards, so it is cleared in configs
+  pytactl did not write and in the bundled set; nothing driven changes.
 - The upstream config sync names the script functions whose behaviour a
   difference changes, so a timing change shows what it affects.
 

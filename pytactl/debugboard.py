@@ -876,6 +876,16 @@ class Pin(dict):
         self.value = value
         super().__setitem__("value", self.value)
 
+    def level(self, value):
+        """The level to drive for the commanded ``value``.
+
+        A pin marked ``inverted`` in the config is driven at the inverse of
+        the commanded value, so that a script reads the same on every board
+        (``battery 1`` disconnects the battery) whichever level the board's
+        circuit needs. ``initial_value`` is a commanded value too.
+        """
+        return int(bool(value) != bool(self.inverted))
+
     def initialize(self):
         raise NotImplementedError()
 
@@ -902,7 +912,7 @@ class FtdiPin(Pin):
         logger.debug(f"Port {self.bus} status: 0x{self.port.status:02X}")
         logger.debug(f"Setting {self.bus}{self.pin_number} to {value}")
         logger.debug(f"Mask: 0x{self.pin_number_mask:02X}")
-        if self.value:
+        if self.level(self.value):
             self.port.write(self.port.status | self.pin_number_mask)
         else:
             self.port.write(self.port.status & ~self.pin_number_mask)
@@ -932,7 +942,7 @@ class PsocPin(Pin):
             logger.warning(f"No port set for pin {self.pin_number}")
             return
         logger.debug(f"Setting {self.pin_number} to {lcl_value}")
-        self.port.write(lcl_value, self.pin_number)
+        self.port.write(self.level(lcl_value), self.pin_number)
 
     def initialize(self):
         self.set(int(self.initial_value))
@@ -959,7 +969,7 @@ class Pic32cxPin(Pin):
             logger.warning(f"No port set for pin {self.pin_number}")
             return
         logger.debug(f"Setting {self.pin_number} to {lcl_value}")
-        self.port.write(lcl_value, self.pin_number)
+        self.port.write(self.level(lcl_value), self.pin_number)
 
     def initialize(self):
         # PIC32CX configs define no initial pin value, and the reference TAC
