@@ -9,12 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The Alpaca script of a config is kept in a file of its own,
-  `TAC_<CHIP>_<ID>.alpaca`, beside the `*.pinout.json` that names it in a new
-  `script_ref` field, so that a script change diffs line by line instead of as
-  a change to one long JSON string. The bundled configs, `installconfigs` and
-  `convertconfigs` use this layout. Configs with the script inline, as
-  upstream writes them, still load.
+- Alpaca scripts are kept in `.alpaca` files, listed in a new `script_ref`
+  field of the `*.pinout.json`, so that a script change diffs line by line
+  instead of as a change to one long JSON string. Boards with the common
+  wiring share `common.alpaca` (and `common-no-usb1.alpaca`), which defines
+  the eight standard quick methods with every delay a variable set in the
+  pinout's `variables`; a board's own `TAC_<CHIP>_<ID>.alpaca` holds only the
+  functions particular to it, and `script_omit` lists the common ones it does
+  not have. 35 of the 58 bundled configs share the common script, 23 of them
+  entirely. The bundled configs, `installconfigs` and `convertconfigs` use
+  this layout, and every bundled board drives its pins with the same timings
+  as before. Configs with the script inline, as upstream writes them, still
+  load.
+- **Renamed quick methods:** `bootToFastBoot` is now `bootToFastboot`
+  (TAC_FTDI_15, 16, 20, 22, 23, 64, 69, TAC_PSOC_7, 24) and `bootToUEFIMenu`
+  is now `bootToUEFI` (TAC_FTDI_15, 16, 22, 64, 69, TAC_PSOC_24), the names
+  every other board uses. Conversion renames them in upstream configs too.
+- The `logComment` messages of the shared functions are the same on every
+  board that uses them.
+- The upstream config sync names the script functions whose behaviour a
+  difference changes, so a timing change shows what it affects.
 
 ## [3.2] - 2026-10-19
 

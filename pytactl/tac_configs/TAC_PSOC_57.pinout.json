@@ -16,7 +16,9 @@
     "platform_id": 57,
     "platform_type": "PSOC",
     "reset_enabled": false,
-    "script_ref": "TAC_PSOC_57.alpaca",
+    "script_ref": [
+        "TAC_PSOC_57.alpaca"
+    ],
     "usb_descriptor": "",
     "pins": [
         {

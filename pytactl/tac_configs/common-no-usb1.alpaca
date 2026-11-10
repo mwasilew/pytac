@@ -1,0 +1,18 @@
+// Variant of common.alpaca for boards that switch only one USB line (usb0).
+// Listed after common.alpaca in "script_ref", it replaces the two functions
+// below and takes the same variables.
+
+def powerOffTheDevice()
+	logComment ====== powerOffTheDevice start ======
+	battery 1
+	usb0 1
+	logComment ====== powerOffTheDevice finish ======
+
+def powerOnTheDevice()
+	logComment ====== powerOnTheDevice start ======
+	delay $powerOffHold
+	battery 0
+	delay $batteryDelay
+	usb0 0
+	delay $usbDelay
+	logComment ====== powerOnTheDevice finish ======

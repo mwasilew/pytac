@@ -17,17 +17,19 @@ splits that into two sibling files:
   file through ``pinout_ref`` and carries only UI concerns.
 
 pytactl goes one step further when it writes a pinout file: the Alpaca script
-is moved out into a sibling ``TAC_<CHIP>_<ID>.alpaca`` file, referenced from the
-pinout through ``script_ref``. JSON has no multi-line strings, so an inline
-script is one long line and any edit to it diffs as a change to the whole
-script; in a file of its own it diffs line by line. See `write_pinout`. A
-pinout file with the script inline, as upstream writes it, loads unchanged.
+is moved out into ``.alpaca`` files, listed in the pinout's ``script_ref``.
+JSON has no multi-line strings, so an inline script is one long line and any
+edit to it diffs as a change to the whole script; in a file of its own it
+diffs line by line. A pinout file with the script inline, as upstream writes
+it, loads unchanged.
 
-``script_ref`` may also list several files, which are combined into one
-script: a function defined in a later file replaces the one of the same name
-from an earlier file, and ``script_omit`` names functions to leave out. That
-lets boards share a common script and keep only what is particular to them in
-a file of their own. See `merge_scripts`.
+The files in ``script_ref`` are combined into one script: a function defined
+in a later file replaces the one of the same name from an earlier file, and
+``script_omit`` names functions to leave out (see `merge_scripts`). That lets
+boards share scripts (`SHARED_SCRIPTS`), with every delay a variable set in
+the pinout, and keep only what is particular to them in a
+``TAC_<CHIP>_<ID>.alpaca`` of their own. `factor_script` works out the split
+when a config is written.
 
 pytactl drives hardware and has no UI, so it wants the pinout half and nothing
 else. This module is the Python port of the upstream split (see
@@ -83,6 +85,25 @@ SCRIPT_EXTENSION = ".alpaca"
 SCRIPT_OMIT = "script_omit"
 
 _FUNCTION_DEF = re.compile(r"^def\s+(\w+)")
+
+# Scripts shared between boards (see factor_script): the common script, which
+# defines the standard functions for boards with the common wiring, followed by
+# variants that redefine some of those functions for a wiring difference many
+# boards share. pytactl matches upstream scripts against the copies in
+# SHARED_SCRIPT_DIR; a config directory written by pytactl holds a copy of each
+# shared script its configs use.
+COMMON_SCRIPT = "common.alpaca"
+SHARED_SCRIPTS = (COMMON_SCRIPT, "common-no-usb1.alpaca")
+SHARED_SCRIPT_DIR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "tac_configs"
+)
+
+# A board takes the common script only when at least this many of its
+# functions are the common ones; otherwise its script is kept whole.
+MIN_COMMON_FUNCTIONS = 4
+
+_DELAY_VARIABLE = re.compile(r"^delay \$(\w+)$")
+_VARIABLE_USE = re.compile(r"\$(\w+)")
 
 # Fields that identify a physical pin. Written flat into the pinout file and
 # inside the overlay's "ref" object. FTDI uses all three, PSOC/PIC32CX only
@@ -206,16 +227,21 @@ def merge_scripts(scripts, omit=()):
 
     Functions are taken in order; one defined again in a later script replaces
     the earlier definition, keeping its place. Functions named in ``omit`` are
-    left out. A single script with nothing to omit is returned unchanged.
+    left out. Text outside any function (a file's header comment) comes first,
+    so that it does not end up after, and so seemingly part of, a function. A
+    single script with nothing to omit is returned unchanged.
     """
     if len(scripts) == 1 and not omit:
         return scripts[0]
-    merged = {}
-    for index, script in enumerate(scripts):
-        for position, (name, text) in enumerate(split_functions(script)):
-            # Text outside any function is kept, once per file it appears in.
-            merged[name if name is not None else (index, position)] = text
-    blocks = [text for name, text in merged.items() if name not in omit]
+    headers = []
+    functions = {}
+    for script in scripts:
+        for name, text in split_functions(script):
+            if name is None:
+                headers.append(text)
+            else:
+                functions[name] = text
+    blocks = headers + [text for name, text in functions.items() if name not in omit]
     return "\n\n".join(blocks) + "\n" if blocks else ""
 
 
@@ -259,18 +285,260 @@ def load_pinout(path):
     return config
 
 
-def write_pinout(directory, name, pinout):
-    """Write ``pinout`` as ``directory/name``, its script in a sibling file.
+def _tidy(text):
+    """A function block without blank lines or trailing whitespace."""
+    return "\n".join(line.rstrip() for line in text.splitlines() if line.strip())
 
-    The script goes to `script_filename_for` ``name``, byte for byte (line
-    endings included), and the pinout file records that name in ``script_ref``
-    where ``script`` was. A pinout without a ``script`` key is written as is.
+
+def _join(blocks):
+    return "\n\n".join(blocks) + "\n" if blocks else ""
+
+
+def _statements(text):
+    """What a function does, for comparing it with a common one.
+
+    The statements of a function block, with comments, ``logComment`` lines
+    and spacing left out, and a run of literal delays added up into one.
+    """
+    statements = []
+    for line in text.splitlines()[1:]:
+        statement = " ".join(line.split("//", 1)[0].split())
+        if not statement or statement.startswith("logComment"):
+            continue
+        previous = statements[-1] if statements else ""
+        if (
+            statement.startswith("delay ")
+            and statement[6:].isdigit()
+            and previous.startswith("delay ")
+            and previous[6:].isdigit()
+        ):
+            statements[-1] = f"delay {int(previous[6:]) + int(statement[6:])}"
+            continue
+        statements.append(statement)
+    return statements
+
+
+def parse_common_script(script):
+    """Parse the common script into ``{function: [slot, ...]}``.
+
+    A slot is either a statement the board's function must have, or, for a
+    ``delay $name`` line, a ``(name, optional)`` pair the board's function may
+    fill with any delay: ``optional`` slots (marked ``// optional``) may also
+    be absent, which is a delay of 0. Each variable may appear only once, so
+    that what a board needs for one function never conflicts with another.
+    """
+    functions = {}
+    seen = set()
+    for name, text in split_functions(script):
+        if name is None:
+            continue
+        slots = []
+        for line in text.splitlines()[1:]:
+            code, _, comment = line.partition("//")
+            statement = " ".join(code.split())
+            if not statement or statement.startswith("logComment"):
+                continue
+            match = _DELAY_VARIABLE.match(statement)
+            if not match:
+                slots.append(statement)
+                continue
+            variable = match.group(1)
+            if variable in seen:
+                raise ConfigFormatError(
+                    f"common script uses ${variable} more than once"
+                )
+            seen.add(variable)
+            slots.append((variable, "optional" in comment))
+        functions[name] = slots
+    return functions
+
+
+# Binding for a variable the board's script already uses by name.
+_KEEP = object()
+
+
+def _match_function(slots, statements, fixed):
+    """Match a board's function against a common one.
+
+    Returns ``{variable: value}`` making the common function do what the
+    board's does, or ``None`` if it cannot. ``value`` is the delay as a string,
+    or `_KEEP` where the board already delays by that variable. ``fixed`` maps
+    the variables the board's script uses to their declared values: those
+    cannot take another value without changing what the script does.
+    """
+
+    def walk(i, j):
+        if i == len(slots):
+            return {} if j == len(statements) else None
+        slot = slots[i]
+        if isinstance(slot, str):
+            if j < len(statements) and statements[j] == slot:
+                return walk(i + 1, j + 1)
+            return None
+        variable, optional = slot
+        if j < len(statements) and statements[j].startswith("delay "):
+            argument = statements[j][6:]
+            value = None
+            if argument == "$" + variable:
+                value = _KEEP
+            elif argument.isdigit() and fixed.get(variable, argument) == argument:
+                value = argument
+            if value is not None:
+                rest = walk(i + 1, j + 1)
+                if rest is not None:
+                    return {variable: value, **rest}
+        if optional and fixed.get(variable, "0") == "0":
+            rest = walk(i + 1, j)
+            if rest is not None:
+                return {variable: "0", **rest}
+        return None
+
+    return walk(0, 0)
+
+
+def read_shared_scripts():
+    """``{name: text}`` of `SHARED_SCRIPTS`, the common script first."""
+    shared = {}
+    for name in SHARED_SCRIPTS:
+        with open(os.path.join(SHARED_SCRIPT_DIR, name)) as handle:
+            shared[name] = handle.read()
+    return shared
+
+
+def factor_script(pinout, script_name, shared_scripts):
+    """Split a config's script into shared scripts and what is left.
+
+    ``shared_scripts`` is ``{name: text}``, the common script first and then
+    its variants (see `SHARED_SCRIPTS`). Each function of the board's script
+    that does what the common function of the same name does, given suitable
+    delays, is taken from the common script; a variant is used when the board
+    has all the functions it redefines and each matches the variant instead.
+    The delays this needs are declared in the pinout's ``variables`` (a
+    variable the script did not use is given the value needed). The board's
+    other functions, and common ones it defines differently, stay in the
+    board's own script; common functions it lacks are listed in
+    ``script_omit``. A board with fewer than `MIN_COMMON_FUNCTIONS` shared
+    functions keeps its script whole.
+
+    Either way, functions are tidied (no blank lines or trailing whitespace)
+    and line endings are LF. Returns ``(pinout, board_script)``: ``pinout``
+    with ``script_ref`` (and ``script_omit``) in place of ``script``, and the
+    text for ``script_name``, or ``None`` if the board needs no file of its own.
+    """
+    script = pinout["script"].replace("\r\n", "\n")
+    # The shared scripts' header comments come along when a config written by
+    # pytactl is loaded; they are the shared scripts', not the board's.
+    for shared in shared_scripts.values():
+        for name, text in split_functions(shared):
+            if name is None:
+                script = script.replace(text, "")
+    blocks = [(name, _tidy(text)) for name, text in split_functions(script)]
+    board_functions = {name: text for name, text in blocks if name is not None}
+    declared = {
+        variable["name"]: str(variable.get("default_value"))
+        for variable in pinout.get("variables", [])
+        if variable.get("name")
+    }
+    fixed = {name: declared.get(name) for name in _VARIABLE_USE.findall(script)}
+
+    def match(function, slots):
+        if function not in board_functions:
+            return None
+        return _match_function(slots, _statements(board_functions[function]), fixed)
+
+    common_name, *variant_names = shared_scripts
+    common = parse_common_script(shared_scripts[common_name])
+    matched = set()
+    bindings = {}
+    for function, slots in common.items():
+        binding = match(function, slots)
+        if binding is not None:
+            matched.add(function)
+            bindings.update(binding)
+
+    used = [common_name]
+    for variant_name in variant_names:
+        variant = parse_common_script(shared_scripts[variant_name])
+        if not set(variant) <= set(common):
+            raise ConfigFormatError(
+                f"{variant_name} defines functions {COMMON_SCRIPT} does not"
+            )
+        if matched & set(variant):
+            continue
+        variant_bindings = [
+            match(function, slots) for function, slots in variant.items()
+        ]
+        if None in variant_bindings:
+            continue
+        used.append(variant_name)
+        matched |= set(variant)
+        for binding in variant_bindings:
+            bindings.update(binding)
+
+    if len(matched) < MIN_COMMON_FUNCTIONS:
+        board_script = _join([text for _, text in blocks])
+        refs = [script_name] if board_script else []
+        return _replace_key(pinout, "script", SCRIPT_REF, refs), board_script or None
+
+    variables = [dict(variable) for variable in pinout.get("variables", [])]
+    by_name = {variable.get("name"): variable for variable in variables}
+    for variable, value in bindings.items():
+        if value is _KEEP:
+            continue
+        if variable in by_name:
+            by_name[variable]["default_value"] = value
+        else:
+            variables.append({"name": variable, "default_value": value})
+
+    board_script = _join([text for name, text in blocks if name not in matched])
+    refs = used + ([script_name] if board_script else [])
+    omit = [function for function in common if function not in board_functions]
+    factored = {}
+    for key, value in pinout.items():
+        if key == "script":
+            factored[SCRIPT_REF] = refs
+            if omit:
+                factored[SCRIPT_OMIT] = omit
+        elif key == "variables":
+            factored[key] = variables
+        else:
+            factored[key] = value
+    factored.setdefault("variables", variables)
+    return factored, board_script or None
+
+
+def _write_if_changed(path, text):
+    try:
+        with open(path) as handle:
+            if handle.read() == text:
+                return
+    except OSError:
+        pass
+    with open(path, "w") as handle:
+        handle.write(text)
+
+
+def write_pinout(directory, name, pinout):
+    """Write ``pinout`` as ``directory/name``, its script in ``.alpaca`` files.
+
+    The script is split with `factor_script`: functions it shares with the
+    `SHARED_SCRIPTS` are taken from those, each one used also written into
+    ``directory``, and the rest goes to `script_filename_for` ``name``. A
+    stale script file of the board's own is removed. A pinout without a
+    ``script`` key is written as is.
     """
     if "script" in pinout:
         script_name = script_filename_for(name)
-        with open(os.path.join(directory, script_name), "w", newline="") as handle:
-            handle.write(pinout["script"])
-        pinout = _replace_key(pinout, "script", SCRIPT_REF, script_name)
+        shared = read_shared_scripts()
+        pinout, board_script = factor_script(pinout, script_name, shared)
+        script_path = os.path.join(directory, script_name)
+        if board_script is not None:
+            _write_if_changed(script_path, board_script)
+        elif os.path.exists(script_path):
+            os.remove(script_path)
+        for shared_name, text in shared.items():
+            if shared_name in pinout[SCRIPT_REF]:
+                _write_if_changed(os.path.join(directory, shared_name), text)
     _write_json(os.path.join(directory, name), pinout)
 
 
@@ -670,7 +938,7 @@ def convert_directory(
     renamed to one spelling (see `normalize_function_names`).
 
     Each ``*.tcnf`` (legacy or already split) becomes a ``*.pinout.json`` with
-    its script in a sibling ``*.alpaca`` file (see `write_pinout`).
+    its script in ``*.alpaca`` files (see `write_pinout`).
     ``*.pinout.json`` files that have no ``*.tcnf`` beside them are converted
     too, so a directory of upstream pinout files can be installed directly.
     A ``devicelist.json`` in ``source`` is copied over with its ``configPath``

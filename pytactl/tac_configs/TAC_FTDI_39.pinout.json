@@ -36,7 +36,9 @@
     "platform_id": 39,
     "platform_type": "FTDI",
     "reset_enabled": false,
-    "script_ref": "TAC_FTDI_39.alpaca",
+    "script_ref": [
+        "TAC_FTDI_39.alpaca"
+    ],
     "usb_descriptor": "ALPACA-LITE FOR RB8 IQ-9075-EVK",
     "pins": [
         {

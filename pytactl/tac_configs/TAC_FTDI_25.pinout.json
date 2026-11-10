@@ -36,7 +36,9 @@
     "platform_id": 25,
     "platform_type": "FTDI",
     "reset_enabled": false,
-    "script_ref": "TAC_FTDI_25.alpaca",
+    "script_ref": [
+        "TAC_FTDI_25.alpaca"
+    ],
     "usb_descriptor": "ALPACA-LITE SDX35 M.2",
     "pins": [
         {

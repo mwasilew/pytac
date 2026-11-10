@@ -15,7 +15,14 @@
     "usb_descriptor": "ALPACA-LITE MAILI CDP",
     "reset_enabled": false,
     "chip_count": 1,
-    "script_ref": "TAC_FTDI_78.alpaca",
+    "script_ref": [
+        "common.alpaca",
+        "common-no-usb1.alpaca",
+        "TAC_FTDI_78.alpaca"
+    ],
+    "script_omit": [
+        "bootToSecondaryEDL"
+    ],
     "bus": [
         {
             "bus": "A",
@@ -360,5 +367,42 @@
             "priority": 2
         }
     ],
-    "variables": []
+    "variables": [
+        {
+            "name": "powerKeyPress",
+            "default_value": "3500"
+        },
+        {
+            "name": "edl",
+            "default_value": "1300"
+        },
+        {
+            "name": "edlRelease",
+            "default_value": "0"
+        },
+        {
+            "name": "fastbootPress",
+            "default_value": "2000"
+        },
+        {
+            "name": "fastboot",
+            "default_value": "6000"
+        },
+        {
+            "name": "fastbootRepeatDelay",
+            "default_value": "30"
+        },
+        {
+            "name": "powerOffHold",
+            "default_value": "500"
+        },
+        {
+            "name": "batteryDelay",
+            "default_value": "900"
+        },
+        {
+            "name": "usbDelay",
+            "default_value": "30"
+        }
+    ]
 }

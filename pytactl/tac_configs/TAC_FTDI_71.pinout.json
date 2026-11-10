@@ -15,7 +15,9 @@
     "usb_descriptor": "ALPACA-LITE FOR RB4 IQ-8275-EVK",
     "reset_enabled": false,
     "chip_count": 1,
-    "script_ref": "TAC_FTDI_71.alpaca",
+    "script_ref": [
+        "TAC_FTDI_71.alpaca"
+    ],
     "bus": [
         {
             "bus": "A",

@@ -1,32 +1,22 @@
-def powerOff() 
+def powerOff()
 	logComment ====== powerOffTheDevice sequence start ======
-
 	battery 1
-
 	logComment ====== powerOffTheDevice sequence finish ======
-
 
 def powerOn()
 	logComment ====== powerOnTheDevice sequence start ======
-
 	battery 0
-
 	logComment ====== powerOnTheDevice sequence finish ======
-
 
 def reset()
 	logComment ====== reset start ======
-
 	powerOff
 	delay 1500
 	powerOn
-
 	logComment ====== reset finish ======
-
 
 def bootToEDL()
 	logComment ====== s1_md_sail_edl start ======
-
 	powerOff
 	pedl 1
 	sdcard 1
@@ -36,13 +26,10 @@ def bootToEDL()
 	delay $Optional_GPIO_Hold_Time
 	pedl 0
 	sdcard 0
-
 	logComment ======  s1_md_sail_edl finish ======
-
 
 def bootToUEFI()
 	logComment ====== s1_uefi start ======
-
 	reset
 	volup 1
 	delay 1000
@@ -57,42 +44,29 @@ def bootToUEFI()
 	pkey 1
 	volup 1
 	pkey 0
-	volup 0 
-
+	volup 0
 	logComment ======s1_uefi finish ======
-
 
 def bootToFastboot()
 	logComment ====== s1_fastboot start ======
-
 	powerOff
 	delay 20
 	fastboot 0
 	powerOn
 	delay 2000
 	fastboot 1
-
 	logComment ====== s1_fastboot finish ======
-
-
 
 def WAKEIN()
 	logComment ====== s1_WAKEIN start ======
-
-	
 	wakein 1
 	delay 50
 	wakein 0
-
 	logComment ====== s1_WAKEIN finish ======
-
 
 def mculesspoff()
 	logComment ====== s1_mculesspoff start ======
-
-	
 	fastpoff 1
 	delay 50
 	fastpoff 0
-
 	logComment ====== s1_mculesspoff finish ======

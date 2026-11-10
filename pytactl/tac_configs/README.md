@@ -38,11 +38,21 @@ this is that configuration written out. `pytactl installconfigs` copies it into
 the directory it populates as `default.pinout.json`; here it keeps its own name,
 and `devicelist.json` entries with no config of their own point straight at it.
 
-Each config's Alpaca script lives in a file of its own beside it
-(`TAC_FTDI_15.pinout.json` -> `TAC_FTDI_15.alpaca`, named by the config's
-`script_ref`), so that a script change diffs line by line. Edit the `.alpaca`
-file directly. It holds the script exactly as upstream has it, line endings
-included; `.gitattributes` keeps git from converting them.
+Alpaca scripts are kept in `.alpaca` files, listed in each config's
+`script_ref`, so that a script change diffs line by line. Boards with the
+common wiring share `common.alpaca` (and `common-no-usb1.alpaca` when they
+switch only `usb0`), with every delay a variable in the config's `variables`;
+the board's own `TAC_<CHIP>_<ID>.alpaca` holds only what is particular to it.
+See "Alpaca scripts" in the top-level README for how the files combine.
+
+* To change a board's timing, change its variable in the `.pinout.json`.
+* To change what one board does, put the function in the board's own
+  `.alpaca` file (creating it and adding it to `script_ref` if need be).
+* A change to a shared file changes every board that lists it.
+
+Re-writing a config with pytactl (`convertconfigs`, the upstream sync) moves
+each function to where it belongs: a function in a board's own file that does
+what the shared one does is folded back into the shared one.
 
 Scripts in these configs indent statements with a single tab, which is what the
 parser requires. `convertconfigs` re-indents on import and logs each file it

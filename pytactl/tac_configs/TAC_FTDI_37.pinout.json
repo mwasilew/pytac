@@ -36,7 +36,9 @@
     "platform_id": 37,
     "platform_type": "FTDI",
     "reset_enabled": false,
-    "script_ref": "TAC_FTDI_37.alpaca",
+    "script_ref": [
+        "TAC_FTDI_37.alpaca"
+    ],
     "usb_descriptor": "RIDE MICRO 4.0",
     "pins": [
         {

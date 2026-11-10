@@ -36,7 +36,11 @@
     "platform_id": 20,
     "platform_type": "FTDI",
     "reset_enabled": false,
-    "script_ref": "TAC_FTDI_20.alpaca",
+    "script_ref": [
+        "common.alpaca",
+        "common-no-usb1.alpaca",
+        "TAC_FTDI_20.alpaca"
+    ],
     "usb_descriptor": "ALPACA-LITE SDX75 CPE",
     "pins": [
         {
@@ -360,5 +364,38 @@
             "priority": 99
         }
     ],
-    "variables": []
+    "variables": [
+        {
+            "name": "powerKeyPress",
+            "default_value": "800"
+        },
+        {
+            "name": "edl",
+            "default_value": "1300"
+        },
+        {
+            "name": "edlRelease",
+            "default_value": "0"
+        },
+        {
+            "name": "secondaryEdlPress",
+            "default_value": "800"
+        },
+        {
+            "name": "secondaryEdl",
+            "default_value": "1300"
+        },
+        {
+            "name": "powerOffHold",
+            "default_value": "500"
+        },
+        {
+            "name": "batteryDelay",
+            "default_value": "900"
+        },
+        {
+            "name": "usbDelay",
+            "default_value": "30"
+        }
+    ]
 }

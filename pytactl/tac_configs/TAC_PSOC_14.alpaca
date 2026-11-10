@@ -1,83 +1,62 @@
-def powerOffTheDevice() 
+def powerOffTheDevice()
 	logComment ====== powerOffTheDevice sequence start ======
-
 	battery 1
 	pkey 0
-	
 	logComment ====== powerOffTheDevice sequence finish ======
 
 def powerOnTheDevice()
 	logComment ====== powerOnTheDevice sequence start ======
-
 	delay 500
 	battery 0
 	pkey 1
 	delay 900
-	
-
 	logComment ====== powerOnTheDevice sequence finish ======
-
 
 def powerOff()
 	logComment ====== powerOff start ======
-
 	powerOffTheDevice
-
 	pkey 0
 	pedl 0
-
 	logComment ====== powerOff finish ======
 
 def powerOn()
 	logComment ====== powerOn start ======
-	
 	powerOnTheDevice
-	
 	delay 500
-
 	pkey 1
 	pkey 0
 	logComment ====== powerOn finish ======
 
-
 def bootToEDL()
 	logComment ====== bootToEDL start ======
-
 	powerOffTheDevice
 	pedl 1
 	powerOnTheDevice
 	delay 3000
 	pedl 0
-
 	logComment ====== bootToEDL finish ======
 
 def bootToEUD()
 	logComment ====== bootToEUD start ======
-
 	powerOffTheDevice
 	eud 1
 	powerOnTheDevice
 	delay 3000
 	eud 0
-
 	logComment ====== bootToEUD finish ======
 
 def bootToUEFI()
 	logComment ====== bootToUEFIMenu start ======
-
 	powerOffTheDevice
 	powerOnTheDevice
 	delay 2100
 	pkey 0
-
 	logComment ====== bootToUEFIMenu finish ======
 
 def bootToFastboot()
 	logComment ====== bootToFastBoot start ======
-
 	powerOffTheDevice
 	powerOnTheDevice
 	delay 3100
 	pkey 0
-
 	logComment ====== bootToFastBoot finished ======

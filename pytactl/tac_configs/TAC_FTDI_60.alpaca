@@ -1,6 +1,5 @@
-def reset() 
+def reset()
 	logComment ====== reset sequence start ======
-	
 	usb0 1
 	usb1 1
 	pkey 0
@@ -14,7 +13,6 @@ def reset()
 	pkey 1
 	delay $reset
 	pkey 0
-
 	logComment ====== reset sequence finish ======
 
 def bootToEDL()
@@ -33,26 +31,20 @@ def bootToEDL()
 	delay $edl
 	pkey 0
 	pedl 0
-
 	logComment ====== bootToEDL finish ======
 
 def bootToUEFI()
 	logComment ====== bootToUEFIMenu start ======
-
 	// Put buttons in a set state
 	pkey 0
 	pedl 0
 	volup 0
 	delay 900
-
 	pkey 1
 	delay 900
 	volup 1
-
 	delay $uefi
-	
 	volup 0
 	delay 900
 	pkey 0
-
 	logComment ====== bootToUEFIMenu finish ======

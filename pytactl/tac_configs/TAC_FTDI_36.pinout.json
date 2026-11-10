@@ -36,7 +36,9 @@
     "platform_id": 36,
     "platform_type": "FTDI",
     "reset_enabled": false,
-    "script_ref": "TAC_FTDI_36.alpaca",
+    "script_ref": [
+        "common.alpaca"
+    ],
     "usb_descriptor": "ALPACA-LITE FOR XR V1",
     "pins": [
         {
@@ -372,6 +374,50 @@
         {
             "default_value": "8000",
             "name": "uefi"
+        },
+        {
+            "name": "powerOffHold",
+            "default_value": "500"
+        },
+        {
+            "name": "batteryDelay",
+            "default_value": "900"
+        },
+        {
+            "name": "usbDelay",
+            "default_value": "30"
+        },
+        {
+            "name": "powerKeyPress",
+            "default_value": "800"
+        },
+        {
+            "name": "edlRelease",
+            "default_value": "0"
+        },
+        {
+            "name": "secondaryEdlPress",
+            "default_value": "800"
+        },
+        {
+            "name": "secondaryEdl",
+            "default_value": "1300"
+        },
+        {
+            "name": "uefiPowerOnDelay",
+            "default_value": "0"
+        },
+        {
+            "name": "uefiRepeatDelay",
+            "default_value": "12"
+        },
+        {
+            "name": "fastbootPress",
+            "default_value": "800"
+        },
+        {
+            "name": "fastbootRepeatDelay",
+            "default_value": "30"
         }
     ]
 }

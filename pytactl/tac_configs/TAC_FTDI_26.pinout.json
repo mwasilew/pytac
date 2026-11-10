@@ -36,7 +36,10 @@
     "platform_id": 26,
     "platform_type": "FTDI",
     "reset_enabled": false,
-    "script_ref": "TAC_FTDI_26.alpaca",
+    "script_ref": [
+        "common.alpaca",
+        "common-no-usb1.alpaca"
+    ],
     "usb_descriptor": "ALPACA-LITE KUNO DEBUG BOARD",
     "pins": [
         {
@@ -360,5 +363,62 @@
             "priority": 2
         }
     ],
-    "variables": []
+    "variables": [
+        {
+            "name": "powerKeyPress",
+            "default_value": "800"
+        },
+        {
+            "name": "edl",
+            "default_value": "1300"
+        },
+        {
+            "name": "edlRelease",
+            "default_value": "0"
+        },
+        {
+            "name": "secondaryEdlPress",
+            "default_value": "800"
+        },
+        {
+            "name": "secondaryEdl",
+            "default_value": "1300"
+        },
+        {
+            "name": "uefiPowerOnDelay",
+            "default_value": "0"
+        },
+        {
+            "name": "uefi",
+            "default_value": "8000"
+        },
+        {
+            "name": "uefiRepeatDelay",
+            "default_value": "12"
+        },
+        {
+            "name": "fastbootPress",
+            "default_value": "2000"
+        },
+        {
+            "name": "fastboot",
+            "default_value": "6000"
+        },
+        {
+            "name": "fastbootRepeatDelay",
+            "default_value": "30"
+        },
+        {
+            "name": "powerOffHold",
+            "default_value": "500"
+        },
+        {
+            "name": "batteryDelay",
+            "default_value": "900"
+        },
+        {
+            "name": "usbDelay",
+            "default_value": "30"
+        }
+    ]
 }

@@ -36,7 +36,10 @@
     "platform_id": 45,
     "platform_type": "FTDI",
     "reset_enabled": false,
-    "script_ref": "TAC_FTDI_45.alpaca",
+    "script_ref": [
+        "common.alpaca",
+        "TAC_FTDI_45.alpaca"
+    ],
     "usb_descriptor": "ALPACA-LITE SIP12 QCB8480X GLYMUR",
     "pins": [
         {
@@ -296,6 +299,42 @@
         {
             "default_value": "500",
             "name": "uefi"
+        },
+        {
+            "name": "powerOffHold",
+            "default_value": "500"
+        },
+        {
+            "name": "batteryDelay",
+            "default_value": "900"
+        },
+        {
+            "name": "usbDelay",
+            "default_value": "30"
+        },
+        {
+            "name": "powerKeyPress",
+            "default_value": "800"
+        },
+        {
+            "name": "edlRelease",
+            "default_value": "0"
+        },
+        {
+            "name": "secondaryEdlPress",
+            "default_value": "800"
+        },
+        {
+            "name": "secondaryEdl",
+            "default_value": "1300"
+        },
+        {
+            "name": "fastbootPress",
+            "default_value": "800"
+        },
+        {
+            "name": "fastbootRepeatDelay",
+            "default_value": "30"
         }
     ]
 }

@@ -36,7 +36,9 @@
     "platform_id": 77,
     "platform_type": "FTDI",
     "reset_enabled": false,
-    "script_ref": "TAC_FTDI_77.alpaca",
+    "script_ref": [
+        "TAC_FTDI_77.alpaca"
+    ],
     "usb_descriptor": "ALPACA-LITE KARNALI QCB DT",
     "pins": [
         {

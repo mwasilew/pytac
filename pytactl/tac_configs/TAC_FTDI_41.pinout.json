@@ -36,7 +36,9 @@
     "platform_id": 41,
     "platform_type": "FTDI",
     "reset_enabled": false,
-    "script_ref": "TAC_FTDI_41.alpaca",
+    "script_ref": [
+        "TAC_FTDI_41.alpaca"
+    ],
     "usb_descriptor": "ALPACA-LITE SDX_FUS_ATP",
     "pins": [
         {

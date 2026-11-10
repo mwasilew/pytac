@@ -13,7 +13,9 @@
     "platform_id": 85,
     "platform_type": "PIC32CXAuto",
     "reset_enabled": false,
-    "script_ref": "TAC_PIC32CXAuto_85.alpaca",
+    "script_ref": [
+        "TAC_PIC32CXAuto_85.alpaca"
+    ],
     "usb_descriptor": "IQ10rrd",
     "pins": [
         {

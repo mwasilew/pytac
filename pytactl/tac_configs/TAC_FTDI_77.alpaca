@@ -1,16 +1,13 @@
-def powerOffTheDevice() 
+def powerOffTheDevice()
 	logComment ====== powerOffTheDevice sequence start ======
-
 	FPPower 0
 	usb0 1
 	usb1 1
 	usb3456 1
-
 	logComment ====== powerOffTheDevice sequence finish ======
 
 def powerOnTheDevice()
 	logComment ====== powerOnTheDevice sequence start ======
-
 	delay 500
 	FPPower 0
 	delay 900
@@ -19,38 +16,28 @@ def powerOnTheDevice()
 	usb3456 0
 	FPPower 0
 	delay 30
-
 	logComment ====== powerOnTheDevice sequence finish ======
 
 def powerOff()
 	logComment ====== powerOff start ======
-
 	powerOffTheDevice
-
 	FPPower 0
 	volup 0
 	voldn 0
-
 	pedl 0
-
 	logComment ====== powerOff finish ======
 
 def powerOn()
 	logComment ====== powerOn start ======
-
 	powerOff
-
 	powerOnTheDevice
-
 	FPPower 1
 	delay 800
 	FPPower 0
-
 	logComment ====== powerOn finish ======
 
 def bootToEDL()
 	logComment ====== bootToEDL start ======
-
 	pkey 0
 	volup 0
 	voldn 0
@@ -60,46 +47,32 @@ def bootToEDL()
 	delay $reset
 	pkey 0
 	pedl 0
-
 	logComment ====== bootToEDL finish ======
 
 def bootToSecondaryEDL()
 	logComment ====== bootToSecondaryEDL start ======
-
 	powerOffTheDevice
-
 	pkey 0
 	volup 0
 	voldn 0
-
 	sedl 1
-
 	powerOnTheDevice
-
 	pkey 1
 	delay 800
 	pkey 0
-
 	delay 1300
-
 	sedl 0
-
 	logComment ====== bootToSecondaryEDL finish ======
 
 def bootToUEFI()
 	logComment ====== bootToUEFIMenu start ======
-
 	powerOffTheDevice
-
 	// Put buttons in a set state
 	pkey 0
 	volup 1
 	voldn 0
-
 	pedl 0
-
 	powerOnTheDevice
-
 	pkey 1
 	delay $uefi
 	pkey 0
@@ -107,46 +80,34 @@ def bootToUEFI()
 	delay 12
 	pkey 1
 	volup 1
-
 	pkey 0
 	volup 0
-
 	logComment ====== bootToUEFIMenu finish ======
 
 def bootToFastboot()
 	logComment ====== bootToFastboot start ======
-
 	powerOffTheDevice
-
 	pkey 0
 	volup 0
 	voldn 1
-
 	pedl 0
-
 	powerOnTheDevice
-
 	pkey 1
 	delay 800
 	pkey 0
-
 	delay $fastboot
 	voldn 0
 	delay 30
 	voldn 1
-
 	voldn 0
-
 	logComment ====== bootToFastboot finished ======
 
 def reset()
 	logComment ====== reset start ======
-
 	pkey 0
 	volup 0
 	voldn 0
 	pkey 1
 	delay $reset
 	pkey 0
-
 	logComment ====== reset finish ======

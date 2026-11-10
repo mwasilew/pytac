@@ -13,7 +13,9 @@
     "platform_id": 14,
     "platform_type": "PSOC",
     "reset_enabled": true,
-    "script_ref": "TAC_PSOC_14.alpaca",
+    "script_ref": [
+        "TAC_PSOC_14.alpaca"
+    ],
     "supportedFirmwareVer": [
         15
     ],

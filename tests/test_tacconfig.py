@@ -15,6 +15,7 @@ its own: dropping pins that a same-named enabled pin shadows.
 import glob
 import json
 import os
+import re
 import subprocess
 
 import pytest
@@ -597,23 +598,265 @@ def test_script_filename_for():
 
 
 @pytest.mark.parametrize(
-    "script",
-    ["def powerOn()\n\tbattery 0\n", "def powerOn()\r\n\tbattery 0", ""],
+    ("script", "stored"),
+    [
+        ("def powerOn()\n\tbattery 0\n", "def powerOn()\n\tbattery 0\n"),
+        ("def powerOn() \r\n\r\n\tbattery 0", "def powerOn()\n\tbattery 0\n"),
+        (
+            "def a()\n\tpkey 1\n\n\n\ndef b()\n\n\tpkey 0\n",
+            "def a()\n\tpkey 1\n\ndef b()\n\tpkey 0\n",
+        ),
+    ],
 )
-def test_write_pinout_moves_script_to_its_own_file(tmp_path, script):
-    """The script is written byte for byte beside the pinout, referenced in the
-    same position, and read back inline."""
+def test_write_pinout_moves_script_to_its_own_file(tmp_path, script, stored):
+    """A script that shares nothing with the common one is written whole beside
+    the pinout, tidied, and referenced in the same position."""
     pinout = {"format": tacconfig.PINOUT_FORMAT, "script": script, "pins": []}
 
     tacconfig.write_pinout(str(tmp_path), "TAC_FTDI_999.pinout.json", pinout)
 
     written = json.loads((tmp_path / "TAC_FTDI_999.pinout.json").read_text())
     assert list(written) == ["format", tacconfig.SCRIPT_REF, "pins"]
-    assert written[tacconfig.SCRIPT_REF] == "TAC_FTDI_999.alpaca"
-    assert (tmp_path / "TAC_FTDI_999.alpaca").read_bytes() == script.encode()
+    assert written[tacconfig.SCRIPT_REF] == ["TAC_FTDI_999.alpaca"]
+    assert (tmp_path / "TAC_FTDI_999.alpaca").read_bytes() == stored.encode()
     path = str(tmp_path / "TAC_FTDI_999.pinout.json")
-    assert tacconfig.load_pinout(path) == pinout
-    assert tacconfig.convert_file(path)["script"] == script
+    assert tacconfig.convert_file(path)["script"] == stored
+    assert sorted(os.listdir(tmp_path)) == [
+        "TAC_FTDI_999.alpaca",
+        "TAC_FTDI_999.pinout.json",
+    ]
+
+
+def test_write_pinout_of_an_empty_script(tmp_path):
+    pinout = {"format": tacconfig.PINOUT_FORMAT, "script": ""}
+
+    tacconfig.write_pinout(str(tmp_path), "TAC_FTDI_999.pinout.json", pinout)
+
+    assert os.listdir(tmp_path) == ["TAC_FTDI_999.pinout.json"]
+    path = str(tmp_path / "TAC_FTDI_999.pinout.json")
+    assert json.loads(open(path).read())[tacconfig.SCRIPT_REF] == []
+    assert tacconfig.convert_file(path)["script"] == ""
+
+
+# ---------------------------------------------------------------------------
+# Sharing the common script
+# ---------------------------------------------------------------------------
+
+SHARED = tacconfig.read_shared_scripts()
+COMMON = SHARED[tacconfig.COMMON_SCRIPT]
+
+
+def board_script(values=None, drop=(), extra=""):
+    """A board script doing what the common one does, with literal delays.
+
+    Every ``$name`` is replaced by ``values[name]`` (100 by default); a delay
+    whose value is ``None`` is left out. Functions in ``drop`` are left out
+    and ``extra`` is appended.
+    """
+    values = values or {}
+    lines = []
+    for line in COMMON.splitlines():
+        match = re.search(r"\$(\w+)", line)
+        if match:
+            value = values.get(match.group(1), "100")
+            if value is None:
+                continue
+            line = line.split("//")[0].replace(match.group(0), value)
+        lines.append(line)
+    blocks = [
+        text
+        for name, text in tacconfig.split_functions("\n".join(lines))
+        if name is not None and name not in drop
+    ]
+    return "\n\n".join(blocks) + "\n" + extra
+
+
+def behaviour(pinout):
+    """``{function: statements}`` with variables substituted and no-op
+    ``delay 0`` left out: what the board does, however it is written."""
+    values = {v["name"]: v["default_value"] for v in pinout.get("variables", [])}
+    script = re.sub(
+        r"\$(\w+)(?!\w)", lambda m: values.get(m.group(1), m.group(0)), pinout["script"]
+    )
+    return {
+        name: [s for s in tacconfig._statements(text) if s != "delay 0"]
+        for name, text in tacconfig.split_functions(script)
+        if name
+    }
+
+
+def factor_and_load(tmp_path, pinout):
+    """Write ``pinout`` and load it back; returns ``(written json, loaded)``."""
+    pinout = {"format": tacconfig.PINOUT_FORMAT, **pinout}
+    tacconfig.write_pinout(str(tmp_path), "TAC_FTDI_999.pinout.json", pinout)
+    path = tmp_path / "TAC_FTDI_999.pinout.json"
+    return json.loads(path.read_text()), tacconfig.convert_file(str(path))
+
+
+def test_common_board_shares_the_whole_script(tmp_path):
+    pinout = {"script": board_script({"edl": "1300", "uefi": "8000"}), "variables": []}
+
+    written, loaded = factor_and_load(tmp_path, pinout)
+
+    assert written[tacconfig.SCRIPT_REF] == [tacconfig.COMMON_SCRIPT]
+    assert tacconfig.SCRIPT_OMIT not in written
+    assert not (tmp_path / "TAC_FTDI_999.alpaca").exists()
+    assert (tmp_path / tacconfig.COMMON_SCRIPT).read_text() == COMMON
+    values = {v["name"]: v["default_value"] for v in written["variables"]}
+    assert values["edl"] == "1300"
+    assert values["uefi"] == "8000"
+    assert values["powerKeyPress"] == "100"
+    assert behaviour(loaded) == behaviour(pinout)
+
+
+def test_optional_delay_absent_is_zero(tmp_path):
+    pinout = {"script": board_script({"edlRelease": None}), "variables": []}
+
+    written, loaded = factor_and_load(tmp_path, pinout)
+
+    values = {v["name"]: v["default_value"] for v in written["variables"]}
+    assert values["edlRelease"] == "0"
+    assert behaviour(loaded) == behaviour(pinout)
+
+
+def test_existing_variable_is_kept(tmp_path):
+    """A delay the board already takes from a variable keeps that variable and
+    its value."""
+    script = board_script({"edl": "$edl"})
+    pinout = {"script": script, "variables": [{"name": "edl", "default_value": "42"}]}
+
+    written, _ = factor_and_load(tmp_path, pinout)
+
+    assert written[tacconfig.SCRIPT_REF] == [tacconfig.COMMON_SCRIPT]
+    assert [v for v in written["variables"] if v["name"] == "edl"] == [
+        {"name": "edl", "default_value": "42"}
+    ]
+
+
+def test_unused_variable_takes_the_literal_value(tmp_path):
+    """Upstream configs often declare a variable the script never reads and
+    delay by a literal instead; the variable takes the delay actually used."""
+    pinout = {
+        "script": board_script({"fastboot": "6000"}),
+        "variables": [{"name": "fastboot", "default_value": "8000"}],
+    }
+
+    written, loaded = factor_and_load(tmp_path, pinout)
+
+    assert written[tacconfig.SCRIPT_REF] == [tacconfig.COMMON_SCRIPT]
+    assert {"name": "fastboot", "default_value": "6000"} in written["variables"]
+    assert behaviour(loaded) == behaviour(pinout)
+
+
+def test_literal_conflicting_with_a_used_variable_stays_with_the_board(tmp_path):
+    """A literal delay where the common script has a variable the board also
+    uses elsewhere, with another value, cannot be shared."""
+    extra = "\ndef other()\n\tdelay $fastboot\n"
+    pinout = {
+        "script": board_script({"fastboot": "6000"}, extra=extra),
+        "variables": [{"name": "fastboot", "default_value": "8000"}],
+    }
+
+    written, loaded = factor_and_load(tmp_path, pinout)
+
+    own = (tmp_path / "TAC_FTDI_999.alpaca").read_text()
+    assert [name for name, _ in tacconfig.split_functions(own)] == [
+        "bootToFastboot",
+        "other",
+    ]
+    assert {"name": "fastboot", "default_value": "8000"} in written["variables"]
+    assert behaviour(loaded) == behaviour(pinout)
+
+
+def test_extra_functions_and_missing_ones(tmp_path):
+    """Functions beyond the common set go to the board's own file; common
+    functions the board lacks are omitted."""
+    extra = "\ndef wakeUp()\n\tvoldn 1\n\tdelay 300\n\tvoldn 0\n"
+    pinout = {"script": board_script(drop=["bootToSecondaryEDL"], extra=extra)}
+
+    written, loaded = factor_and_load(tmp_path, pinout)
+
+    assert written[tacconfig.SCRIPT_REF] == [
+        tacconfig.COMMON_SCRIPT,
+        "TAC_FTDI_999.alpaca",
+    ]
+    assert written[tacconfig.SCRIPT_OMIT] == ["bootToSecondaryEDL"]
+    assert "bootToSecondaryEDL" not in behaviour(loaded)
+    assert behaviour(loaded) == behaviour(pinout)
+
+
+def test_function_done_differently_overrides_the_common_one(tmp_path):
+    script = board_script().replace("\tvolup 1\n\tpkey 0\n\tvolup 0", "\tpkey 0")
+    pinout = {"script": script}
+
+    written, loaded = factor_and_load(tmp_path, pinout)
+
+    own = (tmp_path / "TAC_FTDI_999.alpaca").read_text()
+    assert [name for name, _ in tacconfig.split_functions(own)] == ["bootToUEFI"]
+    assert behaviour(loaded) == behaviour(pinout)
+
+
+def test_variant_is_used_when_the_board_matches_it(tmp_path):
+    script = re.sub(r"\n\tusb1 [01]", "", board_script())
+    pinout = {"script": script}
+
+    written, loaded = factor_and_load(tmp_path, pinout)
+
+    assert written[tacconfig.SCRIPT_REF] == [
+        tacconfig.COMMON_SCRIPT,
+        "common-no-usb1.alpaca",
+    ]
+    assert (tmp_path / "common-no-usb1.alpaca").exists()
+    assert behaviour(loaded) == behaviour(pinout)
+
+
+def test_consecutive_delays_are_added_up(tmp_path):
+    script = board_script({"uefi": "8000"}).replace(
+        "\tdelay 8000\n", "\tdelay 5000\n\tdelay 3000\n"
+    )
+    written, loaded = factor_and_load(tmp_path, {"script": script})
+
+    assert {"name": "uefi", "default_value": "8000"} in written["variables"]
+    assert behaviour(loaded) == behaviour({"script": script})
+
+
+def test_board_sharing_little_keeps_its_script_whole(tmp_path):
+    common = tacconfig.split_functions(board_script())
+    kept = [text for name, text in common if name in ("powerOff", "powerOn")]
+    script = "\n\n".join(kept) + "\n"
+
+    written, loaded = factor_and_load(tmp_path, {"script": script})
+
+    assert written[tacconfig.SCRIPT_REF] == ["TAC_FTDI_999.alpaca"]
+    assert loaded["script"] == script
+
+
+def test_rewriting_a_written_config_changes_nothing(tmp_path):
+    extra = "\ndef wakeUp()\n\tvoldn 1\n"
+    pinout = {"script": board_script(drop=["bootToSecondaryEDL"], extra=extra)}
+    tacconfig.write_pinout(str(tmp_path), "TAC_FTDI_999.pinout.json", pinout)
+    before = {p.name: p.read_bytes() for p in tmp_path.iterdir()}
+
+    tacconfig.copy_config(str(tmp_path / "TAC_FTDI_999.pinout.json"), str(tmp_path))
+
+    assert {p.name: p.read_bytes() for p in tmp_path.iterdir()} == before
+
+
+def test_write_pinout_removes_a_stale_own_script(tmp_path):
+    (tmp_path / "TAC_FTDI_999.alpaca").write_text("def old()\n\tpkey 1\n")
+
+    tacconfig.write_pinout(
+        str(tmp_path), "TAC_FTDI_999.pinout.json", {"script": board_script()}
+    )
+
+    assert not (tmp_path / "TAC_FTDI_999.alpaca").exists()
+
+
+def test_common_script_variables_are_unique():
+    with pytest.raises(tacconfig.ConfigFormatError, match=r"\$edl"):
+        tacconfig.parse_common_script(
+            "def a()\n\tdelay $edl\n\ndef b()\n\tdelay $edl\n"
+        )
 
 
 def test_inline_script_still_loads(tmp_path):
@@ -653,6 +896,29 @@ def test_merge_scripts_overrides_and_omits():
     merged = tacconfig.merge_scripts([base, overlay], omit=["c"])
 
     assert merged == ("def a()\n\tpkey 1\n\ndef b()\n\tvoldn 1\n\ndef d()\n\tvolup 1\n")
+
+
+def test_merge_scripts_puts_text_outside_functions_first():
+    merged = tacconfig.merge_scripts(
+        ["// one\ndef a()\n\tpkey 1\n", "// two\ndef a()\n\tpkey 0\n"]
+    )
+    assert merged == "// one\n\n// two\n\ndef a()\n\tpkey 0\n"
+
+
+def test_shared_headers_do_not_end_up_in_the_board_script(tmp_path):
+    """Loading a config that uses a variant brings both shared headers along;
+    re-writing it leaves them out of the board's own file."""
+    script = re.sub(r"\n\tusb1 [01]", "", board_script(drop=["bootToEDL"]))
+    script += "\ndef bootToEDL()\n\tpedl 1\n"
+    tacconfig.write_pinout(
+        str(tmp_path), "TAC_FTDI_999.pinout.json", {"script": script}
+    )
+    path = str(tmp_path / "TAC_FTDI_999.pinout.json")
+
+    tacconfig.copy_config(path, str(tmp_path))
+
+    own = (tmp_path / "TAC_FTDI_999.alpaca").read_text()
+    assert own == "def bootToEDL()\n\tpedl 1\n"
 
 
 def test_merge_scripts_returns_a_single_script_unchanged():
@@ -755,10 +1021,10 @@ def test_convert_directory_re_indents_scripts_with_tabs(tmp_path):
 
 
 @requires_bundled_configs
-def test_bundled_scripts_are_kept_in_their_own_files():
-    """Shipped configs reference their script rather than holding it inline, so
-    that a script change diffs line by line, and every script file belongs to a
-    config."""
+def test_bundled_scripts_are_kept_in_alpaca_files():
+    """Shipped configs reference their script rather than holding it inline, a
+    board's own script file is named after it, and every script file in the
+    directory is used by some config."""
     directory = pytactl.PACKAGE_TAC_CONFIG_PATH
     referenced = set()
     for path in glob.glob(os.path.join(directory, "*" + tacconfig.PINOUT_EXTENSION)):
@@ -766,13 +1032,40 @@ def test_bundled_scripts_are_kept_in_their_own_files():
             config = json.load(handle)
         name = os.path.basename(path)
         assert "script" not in config, f"{name} holds its script inline"
-        assert config[tacconfig.SCRIPT_REF] == tacconfig.script_filename_for(name)
-        referenced.add(config[tacconfig.SCRIPT_REF])
+        for ref in config[tacconfig.SCRIPT_REF]:
+            assert ref in tacconfig.SHARED_SCRIPTS or ref == (
+                tacconfig.script_filename_for(name)
+            ), f"{name} refers to {ref}"
+            assert os.path.isfile(os.path.join(directory, ref)), f"{ref} is missing"
+            referenced.add(ref)
     on_disk = {
         os.path.basename(path)
         for path in glob.glob(os.path.join(directory, "*" + tacconfig.SCRIPT_EXTENSION))
     }
     assert on_disk == referenced
+
+
+@requires_bundled_configs
+def test_bundled_configs_are_in_canonical_form(tmp_path):
+    """Re-writing a shipped config reproduces it: functions that can be shared
+    are, and every delay of a shared function is a variable. A hand edit that
+    leaves a config in another shape fails here; run the config through
+    `tacconfig.copy_config` to put it right."""
+    directory = pytactl.PACKAGE_TAC_CONFIG_PATH
+    differing = []
+    for path in sorted(
+        glob.glob(os.path.join(directory, "*" + tacconfig.PINOUT_EXTENSION))
+    ):
+        tacconfig.copy_config(path, str(tmp_path))
+        for name in os.listdir(tmp_path):
+            with (
+                open(tmp_path / name) as rewritten,
+                open(os.path.join(directory, name)) as shipped,
+            ):
+                if rewritten.read() != shipped.read():
+                    differing.append(name)
+            os.remove(tmp_path / name)
+    assert not differing, f"not in canonical form: {sorted(set(differing))}"
 
 
 @requires_bundled_configs

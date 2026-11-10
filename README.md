@@ -142,14 +142,39 @@ every config in that PR), which is what `installconfigs` and `convertconfigs` ap
 does not have to wait for the split to land upstream and will consume upstream's `.pinout.json`
 files unchanged once it does.
 
-pytactl writes one more file than upstream: the Alpaca script is moved out of the pinout file into
-a sibling `TAC_<CHIP>_<ID>.alpaca`, which the pinout names in `script_ref`. Inline, the script is
-a single JSON string, so editing one line of it shows in `git diff` as a change to the whole
-script; in its own file it diffs line by line. The bundled configs, `installconfigs` and
-`convertconfigs` all use this layout, and the script file is kept byte for byte (CRLF line
-endings included). A pinout file with the script inline, as upstream writes it, still loads, and
-so does a config set installed by an earlier pytactl. Copy a config together with its `.alpaca`
-file.
+### Alpaca scripts
+
+pytactl keeps the Alpaca script out of the pinout file, in `.alpaca` files the pinout lists in
+`script_ref`. Inline, the script is a single JSON string, so editing one line of it shows in
+`git diff` as a change to the whole script; in a file of its own it diffs line by line.
+
+Most boards run the same sequences with different timings, so their scripts are shared:
+
+| File | Contents |
+|------|----------|
+| `common.alpaca` | `powerOffTheDevice`, `powerOnTheDevice`, `powerOff`, `powerOn`, `bootToEDL`, `bootToSecondaryEDL`, `bootToUEFI` and `bootToFastboot` for the common battery/USB/key/EDL wiring. Every delay is a variable (`$edl`, `$powerKeyPress`, ...), set per board in the pinout's `variables`. |
+| `common-no-usb1.alpaca` | `powerOffTheDevice` and `powerOnTheDevice` for boards that switch only `usb0`. |
+| `TAC_<CHIP>_<ID>.alpaca` | The board's own functions: ones beyond the common set, and common ones the board does differently. |
+
+The files in `script_ref` are combined in order, and a function defined in a later file replaces
+the one of the same name from an earlier file. `script_omit` lists common functions the board does
+not have. A board whose wiring shares little with the common script keeps its whole script in its
+own file:
+
+```json
+"script_ref": ["common.alpaca", "common-no-usb1.alpaca", "TAC_FTDI_65.alpaca"],
+"script_omit": ["bootToSecondaryEDL"],
+"variables": [{"name": "edl", "default_value": "1300"}, ...]
+```
+
+`installconfigs` and `convertconfigs` produce this layout from upstream's inline scripts. Each
+function that does what the common function does, given suitable delays, is taken from the shared
+file, and the delays it needs are declared as variables; everything else stays in the board's own
+file, so the board behaves exactly as upstream's script makes it. Conversion also gives quick
+methods one spelling (`bootToFastBoot` becomes `bootToFastboot`, `bootToUEFIMenu` becomes
+`bootToUEFI`). A pinout file with the script inline, as upstream writes it, still loads, and so
+does a config set installed by an earlier pytactl. Copy a config together with the `.alpaca` files
+it lists.
 
 All three shapes are accepted wherever a single config file is given with `--config-file-path`: a
 `.pinout.json`, a split `.tcnf` (its `pinout_ref` sibling is loaded from the same directory), or a

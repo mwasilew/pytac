@@ -36,7 +36,9 @@
     "platform_id": 18,
     "platform_type": "FTDI",
     "reset_enabled": false,
-    "script_ref": "TAC_FTDI_18.alpaca",
+    "script_ref": [
+        "TAC_FTDI_18.alpaca"
+    ],
     "usb_descriptor": "RIDE MX 4.0 Lite",
     "pins": [
         {

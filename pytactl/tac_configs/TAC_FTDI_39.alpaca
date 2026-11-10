@@ -1,32 +1,22 @@
 def powerOn()
 	logComment ====== on start ======
-	
 	pwr_off 0
-
 	logComment ====== on finish ======
 
-
-def powerOff() 
+def powerOff()
 	logComment ====== off start ======
-
 	pwr_off 1
-
 	logComment ====== off finish ======
-
 
 def reset()
 	logComment ====== reset start ======
-
 	powerOff
 	delay 1500
 	powerOn
-
 	logComment ====== reset finish ======
-
 
 def bootToEDL()
 	logComment ====== s1_md_sail_edl start ======
-
 	powerOff
 	sw_dnld 1
 	ss_force_edl 1
@@ -35,40 +25,31 @@ def bootToEDL()
 	delay 5000
 	sw_dnld 0
 	ss_force_edl 0
-
 	logComment ======  s1_md_sail_edl finish ======
-
 
 def bootToSecondaryEDL()
 	logComment ====== s1_sail_edl start ======
-
 	powerOff
 	ss_force_edl 1
 	delay 1500
 	powerOn
 	delay 5000
 	ss_force_edl 0
-
 	logComment ======  s1_sail_edl finish ======
-
 
 def bootToUEFI()
 	logComment ====== s1_uefi start ======
-
-	reset 
+	reset
 	kpd_pwr 0
 	uefi 1
 	kpd_pwr 1
 	delay 8000
 	kpd_pwr 0
 	uefi 0
-
 	logComment ====== s1_uefi finish ======
-
 
 def bootToFastboot()
 	logComment ====== s1_fastboot start ======
-
 	powerOff
 	delay 1500
 	usb2 1
@@ -76,8 +57,4 @@ def bootToFastboot()
 	powerOn
 	delay 8000
 	usb2 0
-
 	logComment ====== s1_fastboot finish ======
-
-
-
