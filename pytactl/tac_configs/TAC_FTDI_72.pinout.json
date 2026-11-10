@@ -364,6 +364,18 @@
     ],
     "variables": [
         {
+            "default_value": "1300",
+            "name": "edl"
+        },
+        {
+            "default_value": "8000",
+            "name": "fastboot"
+        },
+        {
+            "default_value": "8000",
+            "name": "uefi"
+        },
+        {
             "name": "powerOffHold",
             "default_value": "500"
         },

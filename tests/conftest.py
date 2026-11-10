@@ -130,12 +130,7 @@ EXCLUDED_CONFIGS = {
 
 # Configs that fail to parse/exec. Upstream data problems: left unchanged here,
 # because fixing one means supplying a value only the board's owner knows.
-XFAIL_LOAD = {
-    "TAC_FTDI_72.pinout.json": (
-        "script uses $edl/$uefi/$fastboot but the config declares no variables; "
-        "the delays are board timings only the config can supply"
-    ),
-}
+XFAIL_LOAD = {}
 
 # Configs that load but do not define all three of powerOn/powerOff/bootToEDL.
 # Not defects to fix here: powerOn is not an alias for the powerOnTheDevice most
@@ -169,7 +164,6 @@ XFAIL_EXECUTE = {
     "TAC_FTDI_56.pinout.json": "drives usb1; board only defines usb0",
     "TAC_FTDI_67.pinout.json": "drives sedl/usb1; board defines neither",
     "TAC_FTDI_69.pinout.json": "drives pkey/voldn/volup; M.2 card has no such pins",
-    "TAC_FTDI_72.pinout.json": "undeclared variables; never reaches execution",
     "TAC_FTDI_73.pinout.json": "drives sedl/usb1; board defines neither",
 }
 

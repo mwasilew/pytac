@@ -11,6 +11,11 @@
             "fingerprint": "sha256:b788c0948119e604105a618e50b49f3a1638e1cdfd0f1ff2f0a0f9cfac2fde05",
             "upstream_commit": "1c3bea5e0c76b744f8470023432f58bed9727ec9"
         },
+        "TAC_FTDI_72.pinout.json": {
+            "note": "pytactl declares edl (1300), fastboot (8000) and uefi (8000), which upstream's script uses but the config never declares, so upstream's config cannot load. The values are those of the boards running the identical script (TAC_FTDI_49, 55, 63, PSOC_44, 74, 82, 87).",
+            "fingerprint": "sha256:ec547146dc6c3c03da158b43198a7b69f54af2caf21f60f46d27e2cf474d6d4d",
+            "upstream_commit": "1c3bea5e0c76b744f8470023432f58bed9727ec9"
+        },
         "TAC_FTDI_77.pinout.json": {
             "note": "pytactl drops the second FPPower 0 from powerOnTheDevice; it repeats the first and does nothing.",
             "fingerprint": "sha256:1fc5fbe72e48c94f67124e6a8b21edee289c94fe292683ca48a80c7f2a2ddae2",
