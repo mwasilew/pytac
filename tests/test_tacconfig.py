@@ -714,6 +714,31 @@ def test_convert_directory_reconverts_its_own_output(tmp_path):
     assert "TAC_FTDI_999.alpaca" in before
 
 
+def test_normalize_function_names():
+    script = (
+        "def bootToFastBoot()\n\tpkey 1\n\n"
+        "def bootToUEFIMenu()\n\tvolup 1\n\n"
+        "def all()\n\tbootToFastBoot\n"
+    )
+
+    normalized, renamed = tacconfig.normalize_function_names(script)
+
+    assert normalized == (
+        "def bootToFastboot()\n\tpkey 1\n\n"
+        "def bootToUEFI()\n\tvolup 1\n\n"
+        "def all()\n\tbootToFastboot\n"
+    )
+    assert renamed == [
+        ("bootToFastBoot", "bootToFastboot"),
+        ("bootToUEFIMenu", "bootToUEFI"),
+    ]
+
+
+def test_normalize_function_names_does_not_collide():
+    script = "def bootToFastBoot()\n\tpkey 1\n\ndef bootToFastboot()\n\tpkey 0\n"
+    assert tacconfig.normalize_function_names(script) == (script, [])
+
+
 def test_convert_directory_re_indents_scripts_with_tabs(tmp_path):
     """TAC_FTDI_51, TAC_FTDI_52 and TAC_FTDI_77 each indent two lines with
     spaces upstream; importing them yields configs pytactl will load."""

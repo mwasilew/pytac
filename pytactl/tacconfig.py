@@ -324,6 +324,37 @@ def normalize_script_indentation(script):
     return normalized, changed
 
 
+# Upstream spells some quick methods two ways. Conversion settles on one, so
+# that the same operation has the same name on every board.
+FUNCTION_RENAMES = {
+    "bootToFastBoot": "bootToFastboot",
+    "bootToUEFIMenu": "bootToUEFI",
+}
+
+
+def normalize_function_names(script):
+    """Rename functions spelled differently from the rest of the configs.
+
+    Applies `FUNCTION_RENAMES` to definitions and calls alike. A function is
+    not renamed when the script already defines the target name, since the
+    two would collide; that is logged instead. Returns ``(script, renamed)``,
+    ``renamed`` listing the ``(old, new)`` pairs applied.
+    """
+    defined = {name for name, _ in split_functions(script) if name}
+    renamed = []
+    for old, new in FUNCTION_RENAMES.items():
+        if old not in defined:
+            continue
+        if new in defined:
+            logger.warning(
+                "Script defines both %s and %s; leaving %s as it is", old, new, old
+            )
+            continue
+        script = re.sub(rf"\b{old}\b", new, script)
+        renamed.append((old, new))
+    return script, renamed
+
+
 def git_source_info(directory):
     """Describe ``directory`` as a path inside a git checkout, or ``None``.
 
@@ -635,7 +666,8 @@ def convert_directory(
     """Convert every TAC config in ``source`` into ``destination``.
 
     Script indentation is normalised to tabs on the way through, so that what
-    is written out is what `Board.parse_script` requires.
+    is written out is what `Board.parse_script` requires, and functions are
+    renamed to one spelling (see `normalize_function_names`).
 
     Each ``*.tcnf`` (legacy or already split) becomes a ``*.pinout.json`` with
     its script in a sibling ``*.alpaca`` file (see `write_pinout`).
@@ -718,6 +750,10 @@ def convert_directory(
         script, retabbed = normalize_script_indentation(pinout.get("script", ""))
         if retabbed:
             logger.info("%s: re-indented %d script line(s) with tabs", name, retabbed)
+        script, renamed = normalize_function_names(script)
+        for old, new in renamed:
+            logger.info("%s: renamed %s to %s", name, old, new)
+        if retabbed or renamed:
             pinout["script"] = script
 
         if annotate and source_info and (stated_source or SOURCE_FIELD not in pinout):
