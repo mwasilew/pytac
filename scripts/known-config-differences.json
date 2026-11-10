@@ -6,6 +6,16 @@
             "fingerprint": "sha256:96abe032a859e181129fe2258b7056d48a90a0fdea2606b146fd504dccbd1c3f",
             "upstream_commit": "954c804e694e8b7d7e8fc71c105d66c3f4742d20"
         },
+        "TAC_FTDI_67.pinout.json": {
+            "note": "pytactl corrects sumxs2 to smuxs2 in enS230; the board has no sumxs2 pin, so upstream's enS230 cannot run.",
+            "fingerprint": "sha256:b788c0948119e604105a618e50b49f3a1638e1cdfd0f1ff2f0a0f9cfac2fde05",
+            "upstream_commit": "1c3bea5e0c76b744f8470023432f58bed9727ec9"
+        },
+        "TAC_FTDI_77.pinout.json": {
+            "note": "pytactl drops the second FPPower 0 from powerOnTheDevice; it repeats the first and does nothing.",
+            "fingerprint": "sha256:1fc5fbe72e48c94f67124e6a8b21edee289c94fe292683ca48a80c7f2a2ddae2",
+            "upstream_commit": "1c3bea5e0c76b744f8470023432f58bed9727ec9"
+        },
         "TAC_PSOC_35.pinout.json": {
             "note": "pytactl 8f2c5eb shortens powerDelay from 18000 to 2000 ms; the upstream value makes RB1 reboot after it has started booting.",
             "fingerprint": "sha256:5fd1b396dbcb06d44e863bf571e954370dd7d2ac09b041af39ef20b40b0cf0d5",

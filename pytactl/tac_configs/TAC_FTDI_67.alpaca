@@ -14,7 +14,7 @@ def enASM()
 def enS230()
 	logComment ====== enS230 start ======
 	smuxs1 0
-	sumxs2 1
+	smuxs2 1
 	logComment ====== enS230 finished ======
 
 def enIAM()
