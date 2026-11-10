@@ -877,6 +877,60 @@ def test_write_pinout_removes_a_stale_own_script(tmp_path):
     assert not (tmp_path / "TAC_FTDI_999.alpaca").exists()
 
 
+FAMILY_SCRIPTS = {
+    "one.alpaca": "".join(
+        f"def f{i}()\n\tpin{i} 1\n\tdelay $hold\n\tpin{i} 0\n\n" for i in range(4)
+    ),
+    "one-extra.alpaca": "def extra()\n\tled 1\n\tdelay $blink\n\tled 0\n",
+    "two.alpaca": "".join(
+        f"def f{i}()\n\tother{i} 1\n\tdelay $press\n\n" for i in range(5)
+    ),
+}
+FAMILIES = {"one.alpaca": ("one-extra.alpaca",), "two.alpaca": ()}
+
+
+def family_board(family, functions, value="100"):
+    """A board script doing ``functions`` of ``family`` with literal delays."""
+    script = FAMILY_SCRIPTS[family]
+    blocks = dict(tacconfig.split_functions(re.sub(r"\$\w+", value, script)))
+    return "\n\n".join(blocks[name] for name in functions) + "\n"
+
+
+def factor(script):
+    return tacconfig.factor_script(
+        {"script": script}, "TAC_X.alpaca", FAMILY_SCRIPTS, FAMILIES
+    )
+
+
+def test_family_matching_most_functions_is_chosen():
+    pinout, own = factor(family_board("two.alpaca", ["f0", "f1", "f2", "f3", "f4"]))
+    assert pinout[tacconfig.SCRIPT_REF] == ["two.alpaca"]
+    assert own is None
+
+
+def test_add_on_adds_functions_the_base_does_not_have():
+    script = family_board("one.alpaca", ["f0", "f1", "f2", "f3"])
+    script += family_board("one-extra.alpaca", ["extra"], "50")
+
+    pinout, own = factor(script)
+
+    assert pinout[tacconfig.SCRIPT_REF] == ["one.alpaca", "one-extra.alpaca"]
+    assert own is None
+    values = {v["name"]: v["default_value"] for v in pinout["variables"]}
+    assert values == {"hold": "100", "blink": "50"}
+
+
+def test_add_on_is_not_used_by_a_board_without_its_functions():
+    pinout, own = factor(family_board("one.alpaca", ["f0", "f1", "f2", "f3"]))
+    assert pinout[tacconfig.SCRIPT_REF] == ["one.alpaca"]
+
+
+def test_base_functions_the_board_lacks_are_omitted_from_its_family():
+    pinout, own = factor(family_board("two.alpaca", ["f0", "f1", "f2", "f4"]))
+    assert pinout[tacconfig.SCRIPT_REF] == ["two.alpaca"]
+    assert pinout[tacconfig.SCRIPT_OMIT] == ["f3"]
+
+
 def test_shared_variable_takes_one_value():
     """A variable used in several shared functions stands for the same delay in
     each: a board using two different delays there cannot share both."""
@@ -1098,7 +1152,7 @@ def test_bundled_scripts_are_kept_in_alpaca_files():
         name = os.path.basename(path)
         assert "script" not in config, f"{name} holds its script inline"
         for ref in config[tacconfig.SCRIPT_REF]:
-            assert ref in tacconfig.SHARED_SCRIPTS or ref == (
+            assert ref in tacconfig.SHARED_SCRIPT_NAMES or ref == (
                 tacconfig.script_filename_for(name)
             ), f"{name} refers to {ref}"
             assert os.path.isfile(os.path.join(directory, ref)), f"{ref} is missing"

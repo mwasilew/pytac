@@ -26,7 +26,7 @@ it, loads unchanged.
 The files in ``script_ref`` are combined into one script: a function defined
 in a later file replaces the one of the same name from an earlier file, and
 ``script_omit`` names functions to leave out (see `merge_scripts`). That lets
-boards share scripts (`SHARED_SCRIPTS`), with every delay a variable set in
+boards share scripts (`SHARED_SCRIPTS`), with their delays variables set in
 the pinout, and keep only what is particular to them in a
 ``TAC_<CHIP>_<ID>.alpaca`` of their own. `factor_script` works out the split
 when a config is written.
@@ -91,25 +91,31 @@ SCRIPT_OMIT = "script_omit"
 
 _FUNCTION_DEF = re.compile(r"^def\s+(\w+)")
 
-# Scripts shared between boards (see factor_script): the common script, which
-# defines the standard functions for boards with the common wiring, followed by
-# variants that redefine some of those functions for a wiring difference many
-# boards share. pytactl matches upstream scripts against the copies in
-# SHARED_SCRIPT_DIR; a config directory written by pytactl holds a copy of each
-# shared script its configs use.
+# Scripts shared between boards (see factor_script), by family: each base
+# script defines the standard functions of boards wired alike, and the
+# overlays listed with it either redefine some of those functions, for a
+# difference several boards of the family share, or add functions several of
+# them have. The common script is the base of the largest family. pytactl
+# matches upstream scripts against the copies in SHARED_SCRIPT_DIR; a config
+# directory written by pytactl holds a copy of each shared script its configs
+# use.
 COMMON_SCRIPT = "common.alpaca"
-SHARED_SCRIPTS = (
-    COMMON_SCRIPT,
-    "common-no-usb1.alpaca",
-    "common-uefi-pkey-confirm.alpaca",
+SHARED_SCRIPTS = {
+    COMMON_SCRIPT: (
+        "common-no-usb1.alpaca",
+        "common-uefi-pkey-confirm.alpaca",
+    ),
+}
+SHARED_SCRIPT_NAMES = tuple(
+    name for base, overlays in SHARED_SCRIPTS.items() for name in (base, *overlays)
 )
 SHARED_SCRIPT_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "tac_configs"
 )
 
-# A board takes the common script only when at least this many of its
-# functions are the common ones; otherwise its script is kept whole.
-MIN_COMMON_FUNCTIONS = 4
+# A board takes a family's shared scripts only when at least this many of its
+# functions come from them; otherwise its script is kept whole.
+MIN_SHARED_FUNCTIONS = 4
 
 _DELAY_VARIABLE = re.compile(r"^delay \$(\w+)$")
 _VARIABLE_USE = re.compile(r"\$(\w+)")
@@ -440,9 +446,9 @@ def _match_function(slots, statements, fixed, bound=None):
 
 
 def read_shared_scripts():
-    """``{name: text}`` of `SHARED_SCRIPTS`, the common script first."""
+    """``{name: text}`` of every shared script (`SHARED_SCRIPT_NAMES`)."""
     shared = {}
-    for name in SHARED_SCRIPTS:
+    for name in SHARED_SCRIPT_NAMES:
         with open(os.path.join(SHARED_SCRIPT_DIR, name)) as handle:
             shared[name] = handle.read()
     return shared
@@ -474,26 +480,64 @@ def script_behaviour(config):
     }
 
 
-def factor_script(pinout, script_name, shared_scripts):
+def _match_family(base_name, overlay_names, shared_scripts, match):
+    """Match a board against one family of shared scripts.
+
+    Each function of the base script the board does the same, given suitable
+    delays, is matched; then each overlay whose functions the board all has,
+    none already matched, and each does as the overlay does. Returns
+    ``(used, matched, bindings, base_functions)``: the shared scripts used, the
+    functions they provide, the variable bindings and the base's functions.
+    """
+    base = parse_common_script(shared_scripts[base_name])
+    matched = set()
+    bindings = {}
+    for function, slots in base.items():
+        binding = match(function, slots, bindings)
+        if binding is not None:
+            matched.add(function)
+            bindings = binding
+
+    used = [base_name]
+    for overlay_name in overlay_names:
+        overlay = parse_common_script(shared_scripts[overlay_name])
+        if matched & set(overlay):
+            continue
+        trial = bindings
+        for function, slots in overlay.items():
+            trial = match(function, slots, trial)
+            if trial is None:
+                break
+        if trial is None:
+            continue
+        used.append(overlay_name)
+        matched |= set(overlay)
+        bindings = trial
+    return used, matched, bindings, list(base)
+
+
+def factor_script(pinout, script_name, shared_scripts, families=None):
     """Split a config's script into shared scripts and what is left.
 
-    ``shared_scripts`` is ``{name: text}``, the common script first and then
-    its variants (see `SHARED_SCRIPTS`). Each function of the board's script
-    that does what the common function of the same name does, given suitable
-    delays, is taken from the common script; a variant is used when the board
-    has all the functions it redefines and each matches the variant instead.
+    ``shared_scripts`` is ``{name: text}`` of the shared scripts, and
+    ``families`` maps each base script to its overlays (`SHARED_SCRIPTS` by
+    default). The board is matched against each family (see `_match_family`):
+    a function of the board's script that does what a shared function of the
+    same name does, given suitable delays, is taken from the shared script.
+    The family providing the most functions wins, the first listed on a tie.
     The delays this needs are declared in the pinout's ``variables`` (a
     variable the script did not use is given the value needed). The board's
-    other functions, and common ones it defines differently, stay in the
-    board's own script; common functions it lacks are listed in
-    ``script_omit``. A board with fewer than `MIN_COMMON_FUNCTIONS` shared
-    functions keeps its script whole.
+    other functions, and shared ones it defines differently, stay in the
+    board's own script; base functions it lacks are listed in ``script_omit``.
+    A board getting fewer than `MIN_SHARED_FUNCTIONS` functions from any
+    family keeps its script whole.
 
     Either way, functions are tidied (no blank lines or trailing whitespace)
     and line endings are LF. Returns ``(pinout, board_script)``: ``pinout``
     with ``script_ref`` (and ``script_omit``) in place of ``script``, and the
     text for ``script_name``, or ``None`` if the board needs no file of its own.
     """
+    families = SHARED_SCRIPTS if families is None else families
     script = pinout["script"].replace("\r\n", "\n")
     # The shared scripts' header comments come along when a config written by
     # pytactl is loaded; they are the shared scripts', not the board's.
@@ -516,37 +560,14 @@ def factor_script(pinout, script_name, shared_scripts):
         statements = _statements(board_functions[function])
         return _match_function(slots, statements, fixed, bound)
 
-    common_name, *variant_names = shared_scripts
-    common = parse_common_script(shared_scripts[common_name])
-    matched = set()
-    bindings = {}
-    for function, slots in common.items():
-        binding = match(function, slots, bindings)
-        if binding is not None:
-            matched.add(function)
-            bindings = binding
+    best = None
+    for base_name, overlay_names in families.items():
+        family = _match_family(base_name, overlay_names, shared_scripts, match)
+        if best is None or len(family[1]) > len(best[1]):
+            best = family
+    used, matched, bindings, base_functions = best or ([], set(), {}, [])
 
-    used = [common_name]
-    for variant_name in variant_names:
-        variant = parse_common_script(shared_scripts[variant_name])
-        if not set(variant) <= set(common):
-            raise ConfigFormatError(
-                f"{variant_name} defines functions {COMMON_SCRIPT} does not"
-            )
-        if matched & set(variant):
-            continue
-        trial = bindings
-        for function, slots in variant.items():
-            trial = match(function, slots, trial)
-            if trial is None:
-                break
-        if trial is None:
-            continue
-        used.append(variant_name)
-        matched |= set(variant)
-        bindings = trial
-
-    if len(matched) < MIN_COMMON_FUNCTIONS:
+    if len(matched) < MIN_SHARED_FUNCTIONS:
         board_script = _join([text for _, text in blocks])
         refs = [script_name] if board_script else []
         return _replace_key(pinout, "script", SCRIPT_REF, refs), board_script or None
@@ -563,7 +584,7 @@ def factor_script(pinout, script_name, shared_scripts):
 
     board_script = _join([text for name, text in blocks if name not in matched])
     refs = used + ([script_name] if board_script else [])
-    omit = [function for function in common if function not in board_functions]
+    omit = [name for name in base_functions if name not in board_functions]
     factored = {}
     for key, value in pinout.items():
         if key == "script":
@@ -593,7 +614,7 @@ def write_pinout(directory, name, pinout):
     """Write ``pinout`` as ``directory/name``, its script in ``.alpaca`` files.
 
     The script is split with `factor_script`: functions it shares with the
-    `SHARED_SCRIPTS` are taken from those, each one used also written into
+    shared scripts are taken from those, each one used also written into
     ``directory``, and the rest goes to `script_filename_for` ``name``. A
     stale script file of the board's own is removed. A pinout without a
     ``script`` key is written as is.
