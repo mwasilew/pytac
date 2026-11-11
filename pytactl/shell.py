@@ -5,6 +5,7 @@ import logging
 import sys
 from cmd import Cmd
 
+from . import boardconfig
 from .debugboard import Board, ConfigScriptError
 
 logger = logging.getLogger()
@@ -35,16 +36,16 @@ class AlpacaCmd(Cmd):
     do_EOF = do_quit
 
 
-def _create_board(serial, config_file_path, tac_config_path):
+def _create_board(serial, board_file, boards_dir):
     board = None
     try:
         if serial:
-            board = Board.create_board(serial, tac_config_path)
-        if config_file_path:
-            board = Board.create_from_config(config_file_path)
+            board = Board.create_board(serial, boards_dir or boardconfig.BOARDS_DIR)
+        if board_file:
+            board = Board.create_from_config(board_file)
     except ConfigScriptError as error:
-        # A defect in the config file itself, which the message describes and
-        # the user can act on. A traceback would only bury it.
+        # A defect in a board file, which the message describes and the user
+        # can act on. A traceback would only bury it.
         logger.error("%s", error)
         sys.exit(1)
 
@@ -54,10 +55,8 @@ def _create_board(serial, config_file_path, tac_config_path):
     return board
 
 
-def run_oneshot(
-    command, serial=None, config_file_path=None, tac_config_path=None, value=None
-):
-    board = _create_board(serial, config_file_path, tac_config_path)
+def run_oneshot(command, serial=None, board_file=None, boards_dir=None, value=None):
+    board = _create_board(serial, board_file, boards_dir)
 
     func = getattr(board, command, None)
     if not callable(func):
@@ -78,15 +77,17 @@ def run_oneshot(
         func(value)
 
 
-def run_shell(serial=None, config_file_path=None, tac_config_path=None):
-    board = _create_board(serial, config_file_path, tac_config_path)
+def run_shell(serial=None, board_file=None, boards_dir=None):
+    board = _create_board(serial, board_file, boards_dir)
 
     for pin in board.pins.values():
+        if not pin.command:
+            continue
         method_name = f"do_{pin.command}"
         help_name = f"help_{pin.command}"
         logger.debug(f"Adding {method_name}")
         method = pin.set
-        help_f = make_h(pin.command, pin.get("help_hint"))
+        help_f = make_h(pin.command)
         setattr(AlpacaCmd, method_name, method)
         setattr(AlpacaCmd, help_name, help_f)
 

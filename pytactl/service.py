@@ -183,9 +183,9 @@ api.add_resource(CommandView, "/<boardid>/command/<name>")
 api.add_resource(CommandList, "/<boardid>/command")
 
 
-def run_service(serials, tac_config_path, hostname="0.0.0.0", port=5000):
+def run_service(serials, boards_dir, hostname="0.0.0.0", port=5000):
     for serial in serials:
-        boards.update({serial: Board.create_board(serial, tac_config_path)})
+        boards.update({serial: Board.create_board(serial, boards_dir)})
         executors[serial] = ThreadPoolExecutor(
             max_workers=1, thread_name_prefix=f"board-{serial}"
         )

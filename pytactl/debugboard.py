@@ -1,10 +1,7 @@
 # Copyright (c)i 2025-2026 Qualcomm Technologies, Inc. and/or its subsidiaries.
 # SPDX-License-Identifier: BSD-3-Clause
 
-import json
-import keyword
 import logging
-import os
 import re
 import sys
 from time import sleep
@@ -16,7 +13,7 @@ import usb
 from pexpect import fdpexpect
 from pyftdi.gpio import GpioAsyncController
 
-from . import default_config_file, tacconfig
+from . import boardconfig
 
 logger = logging.getLogger()
 
@@ -39,9 +36,6 @@ BITMODE_CBUS = 0x20
 # USB ctrl transfer request for FT230X CBUS
 SIO_SET_BITMODE_REQUEST = 0x0B
 
-# platform_type values in a TAC config that describe an FTDI-based board.
-FTDI_PLATFORM_TYPES = ("FTDI", "FT232H")
-
 
 class TACException(Exception):
     status_code = 420
@@ -49,9 +43,9 @@ class TACException(Exception):
 
 
 class ConfigScriptError(TACException):
-    """A config script pytactl cannot turn into callable board commands."""
+    """A board file pytactl cannot turn into callable board commands."""
 
-    detail = "Unable to parse the board configuration script"
+    detail = "Unable to load the board file"
 
 
 class Board(dict):
@@ -66,8 +60,8 @@ class Board(dict):
     ID_PRODUCT_PIC32CX = 0x000A
 
     @classmethod
-    def create_from_config(cls, config_file_path):
-        return DummyBoard(config_file_path)
+    def create_from_config(cls, board_file):
+        return DummyBoard(board_file)
 
     @classmethod
     def known_boards(cls):
@@ -141,7 +135,7 @@ class Board(dict):
         return boards
 
     @classmethod
-    def create_board(cls, serial, tac_config_path):
+    def create_board(cls, serial, boards_dir=boardconfig.BOARDS_DIR):
         device = usb.core.find(serial_number=serial)
         if device:
             if (
@@ -155,13 +149,13 @@ class Board(dict):
                 and device.idVendor == Board.ID_VENDOR_FTDI
             ):
                 logger.debug("Found FTDI Board")
-                return FtdiBoard(device, tac_config_path)
+                return FtdiBoard(device, boards_dir)
             if (
                 device.idProduct == Board.ID_PRODUCT_QCOM
                 and device.idVendor == Board.ID_VENDOR_QCOM
             ):
                 logger.debug("Found Psoc Board")
-                return PsocBoard(device, tac_config_path)
+                return PsocBoard(device, boards_dir)
             if (
                 device.idVendor == Board.ID_VENDOR_BUGHOPPER_V2
                 and device.idProduct == Board.ID_PRODUCT_BUGHOPPER_V2
@@ -180,7 +174,7 @@ class Board(dict):
         # via udev instead of usb.core.find.
         if Pic32cxBoard.detect(serial):
             logger.debug("Found PIC32CX Board")
-            return Pic32cxBoard(serial, tac_config_path)
+            return Pic32cxBoard(serial, boards_dir)
 
     def __init__(self):
         self.ports = {}
@@ -206,225 +200,115 @@ class Board(dict):
     def create_ports(self):
         raise NotImplementedError()
 
-    @staticmethod
-    def _sanitize_name(name):
-        # Turn an arbitrary command name into a valid Python identifier.
-        sanitized = re.sub(r"\W", "_", name)
-        if not sanitized or not (sanitized[0].isalpha() or sanitized[0] == "_"):
-            # identifiers may not start with a digit (e.g. "12vpoweroff")
-            sanitized = f"_{sanitized}"
-        if keyword.iskeyword(sanitized):
-            sanitized = f"{sanitized}_"
-        return sanitized
+    def _add_pin(self, pin):
+        """Register a pin created from the board file, and its command."""
+        self.pins[pin.key] = pin
+        if pin.command:
+            logger.debug(f"Adding {pin.command}")
+            self.commands[pin.command] = pin.command
+            setattr(self, pin.command, pin.set)
 
-    @staticmethod
-    def _check_script_indentation(script):
-        """Require every statement in the script to be indented with one tab.
+    def apply_config(self, config):
+        """Drive this board as the board file ``config`` describes.
 
-        TAC config scripts are written with tabs: a ``def`` at column 0 and its
-        body one tab in. pytactl holds configs to that rather than accepting
-        whatever whitespace happens to be there, so that a stray space-indented
-        line is reported against the config instead of being quietly absorbed.
-        ``pytactl convertconfigs`` normalises a config directory to tabs, and
-        the configs shipped with pytactl have been through it.
+        Creates its ports and pins, sets each pin to its initial level, and
+        adds each function of the board's script as a quick method.
         """
-        offenders = []
-        for number, line in enumerate(script.splitlines(), 1):
-            if not line.strip():
-                # Blank lines are not statements, whatever they are made of.
-                continue
-            indent = line[: len(line) - len(line.lstrip())]
-            if indent and indent != "\t":
-                offenders.append(number)
-
-        if offenders:
-            raise ConfigScriptError(
-                "Config script must indent statements with a single tab, but "
-                "line(s) "
-                + ", ".join(str(number) for number in offenders)
-                + " use other whitespace. Run 'pytactl convertconfigs' on the "
-                "config directory to normalise it."
-            )
-
-    def _check_script_commands(self, script):
-        """Warn about commands the script drives that no pin implements.
-
-        Such a command becomes an AttributeError deep inside the config script
-        the first time the board is asked to do something - typically when
-        someone tries to power a board on. Saying so up front, naming the
-        commands, points at the config instead.
-        """
-        defined = set(re.findall(r"^def\s+(\w+)", script, re.MULTILINE))
-        # Driving a pin is "<command> <value>"; a bare "<name>" line calls
-        # another function. delay/logComment are the language's own statements.
-        referenced = set(re.findall(r"^[ \t]+(\w+)[ \t]+\S", script, re.MULTILINE))
-        unbound = sorted(
-            referenced - defined - set(self.commands) - {"delay", "logComment"}
+        reserved = set(dir(type(self)))
+        clashes = sorted(
+            name for name in (*config.commands, *config.functions) if name in reserved
         )
-        if unbound:
-            logger.warning(
-                "Config script drives %s, which no pin in this config defines; "
-                "the functions using them will fail when called",
-                ", ".join(repr(name) for name in unbound),
+        if clashes:
+            raise ConfigScriptError(
+                f"{config.path}: {', '.join(clashes)} would replace pytactl's own "
+                f"board method{'s' if len(clashes) > 1 else ''}; rename "
+                f"{'them' if len(clashes) > 1 else 'it'}"
             )
+        self.config = config
+        self.create_ports()
+        self.create_pins()
+        for name in config.functions:
+            logger.debug(f"Adding {name}")
+            setattr(self, name, MethodType(_script_function(config, name), self))
+            self.quick_methods[name] = QuickMethod(self, name)
 
-    def parse_script(self):
-        if self.full_config:
-            initial_script = self.full_config["script"]
-            new_script = initial_script
+    def _pin_configs(self):
+        """The board file's pins, as the dicts the pin classes take."""
+        for pin in self.config.pins.values():
+            yield {
+                "bus": pin.bus,
+                "command": pin.command,
+                "initial_value": bool(pin.initial),
+                "inverted": pin.inverted,
+                "pin_number": pin.number,
+            }
 
-            self._check_script_indentation(initial_script)
 
-            # Some configs use command names that aren't valid Python
-            # identifiers (e.g. "12vpoweroff" starts with a digit). The script
-            # is converted to Python and exec'd, and create_pins later does
-            # setattr(self, pin.command, ...), so such names must be renamed
-            # consistently in both the script and the pin command they map to.
-            rename_map = {}
-            for pin in self.full_config.get("pins", []):
-                command = pin.get("command")
-                if command and (
-                    not command.isidentifier() or keyword.iskeyword(command)
-                ):
-                    if command not in rename_map:
-                        rename_map[command] = self._sanitize_name(command)
-                    pin["command"] = rename_map[command]
+def _script_function(config, name):
+    """The quick method running function ``name`` of a board's script."""
+    steps = [
+        (
+            statement.kind,
+            statement.target,
+            config.delay_ms(statement)
+            if statement.kind == "delay"
+            else statement.value,
+        )
+        for statement in config.functions[name].statements
+    ]
 
-            for old_name, new_name in rename_map.items():
-                logger.debug(f"Renaming command {old_name} to {new_name}")
-                name_re = re.compile(rf"\b{re.escape(old_name)}\b")
-                new_script = name_re.sub(new_name, new_script)
+    def run(board):
+        board.logComment(f"====== {name} ======")
+        for kind, target, value in steps:
+            if kind == "set":
+                getattr(board, target)(value)
+            elif kind == "delay":
+                board.delay(value)
+            else:
+                getattr(board, target)()
 
-            # replace variables with actual values
-            # Match each "$name" only as a whole token: without the trailing
-            # (?!\w), substituting "$edl" would also rewrite the start of
-            # "$edl_long". The value is passed through a function so that it is
-            # inserted literally rather than parsed as a replacement template.
-            variables = self.full_config.get("variables", [])
-            for variable in variables:
-                # create global variables
-                var_name = variable.get("name")
-                if var_name:
-                    var_re = re.compile(rf"\${re.escape(var_name)}(?!\w)")
-                    value = str(variable["default_value"])
-                    new_script = var_re.sub(
-                        lambda _match, value=value: value, new_script
-                    )
+    run.__name__ = name
+    return run
 
-            # A "$name" left over is a variable the script uses but the config
-            # never declares, so there is no value to substitute. Say which,
-            # rather than letting it reach exec() as a syntax error: the value
-            # is a board timing that only the config can supply.
-            undeclared = sorted(set(re.findall(r"\$(\w+)", new_script)))
-            if undeclared:
-                raise ConfigScriptError(
-                    "Config script uses undeclared variable(s) "
-                    + ", ".join(f"${name}" for name in undeclared)
-                    + "; the config declares "
-                    + (
-                        ", ".join(sorted(v["name"] for v in variables if v.get("name")))
-                        or "none"
-                    )
-                )
 
-            # remove lines that start with // (// is a valid comment)
-            new_script = "\n".join(
-                line
-                for line in new_script.splitlines()
-                if not line.lstrip().startswith("//")
-            )
+def _load(board_file):
+    try:
+        return boardconfig.load_board(board_file)
+    except boardconfig.ConfigError as error:
+        raise ConfigScriptError(str(error)) from error
 
-            # remove commented lines
-            fix_comments = re.compile(r"\/\/.*")
-            new_script = fix_comments.sub("\r", new_script)
-            fix_comments = re.compile(r"\/\/.*\r")
-            new_script = fix_comments.sub("\r", new_script)
 
-            # Keep the script in its own language, with comments and variables
-            # already resolved, for the command check further down: everything
-            # below rewrites it into Python.
-            alpaca_script = new_script
-
-            # fix function definitions
-            fix_functions = re.compile(r"\(\)[\s]?", re.MULTILINE)
-            new_script = fix_functions.sub("(self):\n", new_script)
-            fix_functions2 = re.compile(r"\(\)[\s]?\r", re.MULTILINE)
-            new_script = fix_functions2.sub("(self):\r", new_script)
-
-            # add brackets to function calls
-            fix_no_parenthesis = re.compile(
-                r"([A-Za-z0-9_]+)\s([0-9]+)\s?", re.MULTILINE
-            )
-            new_script = fix_no_parenthesis.sub(r"self.\1(\2)\n", new_script)
-
-            # fixes syntax of internal function calls
-            fix_no_parenthesis_func = re.compile(r"\t([A-Za-z0-9_]+)$", re.MULTILINE)
-            new_script = fix_no_parenthesis_func.sub(r"\tself.\1()", new_script)
-
-            fix_no_parenthesis_empty = re.compile(
-                r"self.([A-Za-z0-9_]+)\s?$", re.MULTILINE
-            )
-            new_script = fix_no_parenthesis_empty.sub(r"self.\1()", new_script)
-
-            fix_log_comment = re.compile(
-                r"logComment\s([a-zA-Z0-9=_\ ]+)\s?$", re.MULTILINE
-            )
-            new_script = fix_log_comment.sub(r'self.logComment("\1")', new_script)
-
-            d = {}
-            # nosemgrep: python.lang.security.audit.exec-detected.exec-detected
-            exec(new_script, d)
-
-            # create ports
-            self.create_ports()
-
-            # create pins
-            self.create_pins()
-
-            self._check_script_commands(alpaca_script)
-
-            # iterate keys explicitly: this is an exec'd namespace and the
-            # `.keys()` form is load-bearing here (see config-parsing history)
-            for name in d.keys():  # noqa: SIM118
-                if not name.startswith("__"):
-                    logger.debug(f"Adding {name}")
-                    self.quick_methods.update({name: QuickMethod(self, name)})
-                    method = MethodType(d.get(name), self)
-                    setattr(self, name, method)
+def _find(boards_dir, description, **key):
+    try:
+        config = boardconfig.find_board(boards_dir, **key)
+    except boardconfig.ConfigError as error:
+        raise ConfigScriptError(str(error)) from error
+    if config is None:
+        logger.error("No board file in %s matches %s", boards_dir, description)
+        sys.exit(1)
+    return config
 
 
 class DummyBoard(Board):
-    def __init__(self, config_path):
+    def __init__(self, board_file):
         Board.__init__(self)
-        self.config_path = config_path
         self.usb_device = lambda: None
         self.usb_device.serial_number = "123456"
-        self.full_config = tacconfig.convert_file(self.config_path)
-        self.parse_script()
+        self.apply_config(_load(board_file))
 
     def create_ports(self):
         logger.debug("creating ports")
-        # The pinout config names the platform explicitly, so the port layout
-        # no longer has to be guessed from the file name.
-        platform_type = self.full_config.get("platform_type", "")
-        if platform_type in FTDI_PLATFORM_TYPES:
-            for p in self.full_config.get("bus"):
-                bus_name = p.get("bus")
-                if p.get("bus_function") == 2:
-                    self.ports.update({bus_name: DummyPort(bus_name, "123456")})
-
-        if platform_type == "PSOC":
-            self.ports.update({0: DummyPort("123456", None)})
+        for bus in self.config.gpio_buses:
+            self.ports[bus] = DummyPort(bus, "123456")
+        if not self.config.gpio_buses:
+            self.ports[0] = DummyPort("123456", None)
 
     def create_pins(self):
         logger.debug("creating pins")
-        for config in self.full_config.get("pins"):
+        for config in self._pin_configs():
             pin = DummyPin(self, config)
-            pin.setPort(self.ports.get(0))
-            logger.debug(f"Adding {pin.command}")
-            self.pins.update({f"{pin.pin_number}": pin})
-            self.commands.update({f"{pin.command}": f"{pin.command}"})
-            setattr(self, pin.command, pin.set)
+            pin.setPort(self.ports.get(pin.bus, self.ports.get(0)))
+            self._add_pin(pin)
 
 
 class BughopperV1Board(Board):
@@ -603,74 +487,39 @@ class BughopperV2Board(Board):
 
 
 class FtdiBoard(Board):
-    def __init__(self, usb_device, tac_config_path):
+    def __init__(self, usb_device, boards_dir=boardconfig.BOARDS_DIR):
         Board.__init__(self)
         self.usb_device = usb_device
-        # Default config for FTDI Alpaca-Lite, used when the board's USB
-        # descriptor matches no catalog entry.
-        conf = default_config_file(tac_config_path)
-        f = open(os.path.join(tac_config_path, "devicelist.json"))
-        device_list = json.loads(f.read())
-        f.close()
-        catalog = device_list.get("catalog")
-        conf_dict = next(
-            (x for x in catalog if x.get("usb_descriptor") == self.usb_device.product),
-            None,
-        )
-        if conf_dict:
-            conf = os.path.join(
-                tac_config_path, os.path.basename(conf_dict.get("configPath"))
+        # A board whose USB product string no board file claims is driven
+        # with the fallback board file (the ALPACA LITE default).
+        self.apply_config(
+            _find(
+                boards_dir,
+                f"USB product {usb_device.product!r}",
+                usb_product=usb_device.product,
+                fallback=True,
             )
-
-        if conf is None:
-            logger.error("No matching FTDI config found")
-            sys.exit(1)
-
-        self.full_config = tacconfig.convert_file(conf)
-        self.parse_script()
+        )
 
     def create_ports(self):
-        for p in self.full_config.get("bus"):
-            bus_name = p.get("bus")
-            if p.get("bus_function") == 2:
-                self.ports.update(
-                    {bus_name: FtdiPort(bus_name, self.usb_device.serial_number)}
-                )
+        for bus in self.config.gpio_buses:
+            self.ports[bus] = FtdiPort(bus, self.usb_device.serial_number)
 
     def create_pins(self):
-        for p in self.full_config.get("pins"):
-            pin = FtdiPin(self, p)
+        for config in self._pin_configs():
+            pin = FtdiPin(self, config)
             pin.setPort(self.ports.get(pin.bus))
-            logger.debug(f"Adding {pin.command}")
-            self.pins.update({f"{pin.bus}{pin.pin_number}": pin})
-            self.commands.update({f"{pin.command}": f"{pin.command}"})
-            setattr(self, pin.command, pin.set)
+            self._add_pin(pin)
 
 
 class PsocBoard(Board):
-    def __init__(self, usb_device, tac_config_path):
+    def __init__(self, usb_device, boards_dir=boardconfig.BOARDS_DIR):
         Board.__init__(self)
         self.usb_device = usb_device
-        conf = None
-        f = open(os.path.join(tac_config_path, "devicelist.json"))
-        device_list = json.loads(f.read())
-        f.close()
-        catalog = device_list.get("catalog")
         self.board_id = self.__get_board_id()
-        conf_dict = next(
-            (x for x in catalog if x.get("platform_id") == self.board_id), None
+        self.apply_config(
+            _find(boards_dir, f"PSOC board id {self.board_id}", board_id=self.board_id)
         )
-        if conf_dict:
-            conf = os.path.join(
-                tac_config_path, os.path.basename(conf_dict.get("configPath"))
-            )
-
-        if conf is None:
-            logger.error("No matching PSOC config found")
-            sys.exit(1)
-
-        self.full_config = tacconfig.convert_file(conf)
-        self.parse_script()
         self.quick_methods.update({"devicePowerOn": QuickMethod(self, "devicePowerOn")})
         self.quick_methods.update(
             {"devicePowerOff": QuickMethod(self, "devicePowerOff")}
@@ -749,13 +598,10 @@ class PsocBoard(Board):
         self.ports.update({0: PsocPort(self.usb_device.serial_number)})
 
     def create_pins(self):
-        for config in self.full_config.get("pins"):
+        for config in self._pin_configs():
             pin = PsocPin(self, config)
             pin.setPort(self.ports.get(0))
-            logger.debug(f"Adding {pin.command}")
-            self.pins.update({f"{pin.pin_number}": pin})
-            self.commands.update({f"{pin.command}": f"{pin.command}"})
-            setattr(self, pin.command, pin.set)
+            self._add_pin(pin)
 
 
 class Pic32cxBoard(Board):
@@ -779,57 +625,29 @@ class Pic32cxBoard(Board):
                 return True
         return False
 
-    def __init__(self, serial, tac_config_path):
+    def __init__(self, serial, boards_dir=boardconfig.BOARDS_DIR):
         Board.__init__(self)
         self.usb_device = lambda: None
         self.usb_device.serial_number = serial
-        conf = None
-        f = open(os.path.join(tac_config_path, "devicelist.json"))
-        device_list = json.loads(f.read())
-        f.close()
-        catalog = device_list.get("catalog")
         # The platform is identified by the part of the serial number before
-        # "XX", which matches the usb_descriptor field in devicelist.json.
-        self.usb_descriptor = serial.split("XX")[0]
-        conf_dict = next(
-            (x for x in catalog if x.get("usb_descriptor") == self.usb_descriptor),
-            None,
+        # "XX", which board files list as serial_prefix.
+        self.serial_prefix = serial.split("XX")[0]
+        self.apply_config(
+            _find(
+                boards_dir,
+                f"serial prefix {self.serial_prefix!r} (serial {serial})",
+                serial_prefix=self.serial_prefix,
+            )
         )
-        if conf_dict:
-            conf = os.path.join(
-                tac_config_path, os.path.basename(conf_dict.get("configPath"))
-            )
-
-        if conf is None:
-            logger.error(
-                "No matching PIC32CX config found for usb_descriptor %r "
-                "(serial %s). Known usb_descriptors: %s",
-                self.usb_descriptor,
-                serial,
-                ", ".join(
-                    sorted(
-                        x.get("usb_descriptor")
-                        for x in catalog
-                        if x.get("usb_descriptor")
-                    )
-                ),
-            )
-            sys.exit(1)
-
-        self.full_config = tacconfig.convert_file(conf)
-        self.parse_script()
 
     def create_ports(self):
         self.ports.update({0: Pic32cxPort(self.usb_device.serial_number)})
 
     def create_pins(self):
-        for config in self.full_config.get("pins"):
+        for config in self._pin_configs():
             pin = Pic32cxPin(self, config)
             pin.setPort(self.ports.get(0))
-            logger.debug(f"Adding {pin.command}")
-            self.pins.update({f"{pin.pin_number}": pin})
-            self.commands.update({f"{pin.command}": f"{pin.command}"})
-            setattr(self, pin.command, pin.set)
+            self._add_pin(pin)
 
 
 class QuickMethod(dict):
@@ -854,10 +672,8 @@ class Pin(dict):
         self.command = config.get("command")
         self.initial_value = config.get("initial_value")
         self.value = self.initial_value
-        self.input = config.get("input")
         self.inverted = config.get("inverted")
         self.pin_number = int(config.get("pin_number"))
-        self.help_hint = config.get("help_hint")
         self.port = None
         dict.__init__(
             self,
@@ -865,12 +681,15 @@ class Pin(dict):
             command=self.command,
             initial_value=self.initial_value,
             value=self.value,
-            input=self.input,
             inverted=self.inverted,
             pin_number=self.pin_number,
-            help_hint=self.help_hint,
             port=self.port,
         )
+
+    @property
+    def key(self):
+        """The pin as board files name it: "D1" on FTDI, "53" elsewhere."""
+        return f"{self.bus or ''}{self.pin_number}"
 
     def set(self, value):
         self.value = value

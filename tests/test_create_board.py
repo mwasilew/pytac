@@ -4,15 +4,15 @@
 """Tests for Board.create_board(): the USB vendor/product dispatch that maps a
 plugged-in device onto the correct board implementation."""
 
-import json
+import os
 import sys
 import types
 from unittest.mock import MagicMock
 
 import pytest
-from conftest import config_path_or_skip, make_usb_device
+from conftest import connect, make_usb_device, requires_boards
 
-from pytactl import debugboard, tacconfig
+from pytactl import debugboard
 
 Board = debugboard.Board
 
@@ -29,41 +29,64 @@ BUGHOPPER_METHODS = (
 
 def test_create_board_returns_none_when_no_device(patch_usb_find, monkeypatch):
     monkeypatch.setattr(debugboard.usb.core, "find", lambda **kwargs: None)
-    assert Board.create_board("missing", "./tac_configs") is None
+    assert Board.create_board("missing") is None
 
 
-def test_create_board_dispatches_ftdi(prepared_configs, patch_usb_find):
-    config_dir, _ = prepared_configs
-    device = make_usb_device(
-        Board.ID_VENDOR_FTDI, Board.ID_PRODUCT_FTDI, "S1", product_str="anything"
-    )
-    patch_usb_find(device)
-    board = Board.create_board("S1", config_dir)
+def board_file(board):
+    return os.path.basename(board.config.path)
+
+
+@requires_boards
+def test_ftdi_board_is_found_by_its_usb_product(patch_usb_find, monkeypatch):
+    board = connect("FTDI", patch_usb_find, monkeypatch, "ALPACA-LITE MTP8975")
     assert isinstance(board, debugboard.FtdiBoard)
+    assert board_file(board) == "ftdi-65.toml"
 
 
-def test_create_board_dispatches_psoc(prepared_configs, patch_usb_find, monkeypatch):
-    config_dir, entries = prepared_configs
-    # Pick any registered PSOC platform id; skip if no PSOC configs are present.
-    psoc_ids = [e.match_value for e in entries.values() if e.platform_type == "PSOC"]
-    if not psoc_ids:
-        pytest.skip("no PSOC config files present to exercise the PSOC dispatch")
+@requires_boards
+def test_unknown_ftdi_board_falls_back_to_alpaca_lite(patch_usb_find, monkeypatch):
+    board = connect("FTDI", patch_usb_find, monkeypatch, "No Such Board")
+    assert board_file(board) == "ftdi-13.toml"
+    assert board.config.fallback
 
-    device = make_usb_device(Board.ID_VENDOR_QCOM, Board.ID_PRODUCT_QCOM, "S2")
-    patch_usb_find(device)
-    monkeypatch.setattr(
-        debugboard.PsocBoard,
-        "_PsocBoard__get_board_id",
-        lambda self: psoc_ids[0],
-    )
-    board = Board.create_board("S2", config_dir)
+
+@requires_boards
+def test_psoc_board_is_found_by_its_board_id(patch_usb_find, monkeypatch):
+    board = connect("PSOC", patch_usb_find, monkeypatch, 7)
     assert isinstance(board, debugboard.PsocBoard)
+    assert board_file(board) == "psoc-7.toml"
+
+
+@requires_boards
+def test_unknown_psoc_board_exits(patch_usb_find, monkeypatch):
+    with pytest.raises(SystemExit):
+        connect("PSOC", patch_usb_find, monkeypatch, 99999)
+
+
+@requires_boards
+@pytest.mark.parametrize("prefix", ["KARUSSELL", "KARUSSELLV2"])
+def test_pic32cx_board_is_found_by_its_serial_prefix(
+    prefix, patch_usb_find, monkeypatch
+):
+    """A PIC32CX board is invisible to libusb: usb.core.find returns nothing
+    and create_board falls through to the udev-based Pic32cxBoard.detect."""
+    board = connect("PIC32CX", patch_usb_find, monkeypatch, prefix)
+    assert isinstance(board, debugboard.Pic32cxBoard)
+    assert board_file(board) == "pic32cx-54.toml"
+    for name in ("powerOn", "powerOff", "bootToEDL"):
+        board.quick_methods[name].call()
+
+
+@requires_boards
+def test_unknown_pic32cx_board_exits(patch_usb_find, monkeypatch):
+    with pytest.raises(SystemExit):
+        connect("PIC32CX", patch_usb_find, monkeypatch, "UNKNOWN")
 
 
 def test_create_board_dispatches_bughopper_v1(patch_usb_find):
     device = make_usb_device(Board.ID_VENDOR_FTDI, Board.ID_PRODUCT_BUGHOPPER_V1, "S3")
     patch_usb_find(device)
-    board = Board.create_board("S3", "./tac_configs")
+    board = Board.create_board("S3")
     assert isinstance(board, debugboard.BughopperV1Board)
     for name in BUGHOPPER_METHODS:
         assert name in board.quick_methods
@@ -78,7 +101,7 @@ def test_create_board_bughopper_v2_exits_without_hid(patch_usb_find, monkeypatch
     monkeypatch.delitem(sys.modules, "hid", raising=False)
 
     with pytest.raises(SystemExit):
-        Board.create_board("S4", "./tac_configs")
+        Board.create_board("S4")
 
 
 def test_create_board_dispatches_bughopper_v2_with_hid(patch_usb_find, monkeypatch):
@@ -96,7 +119,7 @@ def test_create_board_dispatches_bughopper_v2_with_hid(patch_usb_find, monkeypat
     monkeypatch.setitem(sys.modules, "hid", fake_hid)
     monkeypatch.setattr(debugboard, "hid", fake_hid, raising=False)
 
-    board = Board.create_board("S5", "./tac_configs")
+    board = Board.create_board("S5")
     assert isinstance(board, debugboard.BughopperV2Board)
     for name in BUGHOPPER_METHODS:
         assert name in board.quick_methods
@@ -123,7 +146,7 @@ def test_bughopper_v2_hid_writes_prefix_report_id(patch_usb_find, monkeypatch):
     monkeypatch.setitem(sys.modules, "hid", fake_hid)
     monkeypatch.setattr(debugboard, "hid", fake_hid, raising=False)
 
-    board = Board.create_board("S6", "./tac_configs")
+    board = Board.create_board("S6")
     board.bootToEDL()
 
     writes = [call.args[0] for call in hid_device.write.call_args_list]
@@ -132,79 +155,6 @@ def test_bughopper_v2_hid_writes_prefix_report_id(patch_usb_find, monkeypatch):
         assert payload[0] == 0x00, f"missing report-ID prefix: {list(payload)}"
         # byte 1 is the application command (CMD_GPIO), not stripped as report ID
         assert payload[1] == board.CMD_GPIO
-
-
-# Required quick methods the PIC32CX config script defines and the test invokes.
-PIC32CX_CONFIG = "TAC_PIC32CXAuto_54.pinout.json"
-PIC32CX_METHODS = ("powerOn", "powerOff", "bootToEDL")
-
-
-def _prepare_pic32cx_config_dir(tmp_path, usb_descriptor):
-    """Copy the PIC32CX config into an isolated dir alongside a devicelist.json
-    that maps ``usb_descriptor`` (the serial prefix before "XX") to it.
-
-    Skips the calling test when the config is not available (it is part of the
-    upstream config set, not of this repository).
-    """
-    tacconfig.copy_config(config_path_or_skip(PIC32CX_CONFIG), str(tmp_path))
-    catalog = {
-        "catalog": [
-            {
-                "usb_descriptor": usb_descriptor,
-                "configPath": PIC32CX_CONFIG,
-            }
-        ]
-    }
-    (tmp_path / "devicelist.json").write_text(json.dumps(catalog))
-    return str(tmp_path)
-
-
-def test_create_board_dispatches_pic32cx(tmp_path, patch_usb_find, monkeypatch):
-    """A PIC32CX board is invisible to libusb, so usb.core.find returns nothing
-    and create_board falls through to the udev-based Pic32cxBoard.detect path."""
-    config_dir = _prepare_pic32cx_config_dir(tmp_path, "KARUSSELL")
-    # usb.core.find finds no device; detect() (which would query udev) is forced.
-    patch_usb_find(None)
-    monkeypatch.setattr(
-        debugboard.Pic32cxBoard, "detect", staticmethod(lambda serial: True)
-    )
-
-    # The platform is identified by the serial prefix before "XX".
-    board = Board.create_board("KARUSSELLXX01", config_dir)
-
-    assert isinstance(board, debugboard.Pic32cxBoard)
-    assert board.full_config["platform_type"] == "PIC32CXAuto"
-
-
-def test_create_board_pic32cx_required_methods(tmp_path, patch_usb_find, monkeypatch):
-    """The PIC32CX board exposes powerOn/powerOff/bootToEDL as callable quick
-    methods, and invoking them runs the parsed script through the mocked port."""
-    config_dir = _prepare_pic32cx_config_dir(tmp_path, "KARUSSELL")
-    patch_usb_find(None)
-    monkeypatch.setattr(
-        debugboard.Pic32cxBoard, "detect", staticmethod(lambda serial: True)
-    )
-
-    board = Board.create_board("KARUSSELLXX01", config_dir)
-
-    for name in PIC32CX_METHODS:
-        assert name in board.quick_methods
-        assert callable(getattr(board, name, None))
-        getattr(board, name)()
-
-
-def test_create_board_pic32cx_no_matching_config_exits(
-    tmp_path, patch_usb_find, monkeypatch
-):
-    """When no catalog entry matches the serial prefix, construction exits."""
-    config_dir = _prepare_pic32cx_config_dir(tmp_path, "KARUSSELL")
-    patch_usb_find(None)
-    monkeypatch.setattr(
-        debugboard.Pic32cxBoard, "detect", staticmethod(lambda serial: True)
-    )
-
-    with pytest.raises(SystemExit):
-        Board.create_board("UNKNOWNXX01", config_dir)
 
 
 def test_bughopper_v2_wake_up_pulses_vol_down(patch_usb_find, monkeypatch):
@@ -223,7 +173,7 @@ def test_bughopper_v2_wake_up_pulses_vol_down(patch_usb_find, monkeypatch):
     monkeypatch.setattr(debugboard, "hid", fake_hid, raising=False)
     monkeypatch.setattr(debugboard, "sleep", lambda s: None)
 
-    board = Board.create_board("S7", "./tac_configs")
+    board = Board.create_board("S7")
     board.wakeUp()
 
     writes = [call.args[0] for call in hid_device.write.call_args_list]
@@ -240,7 +190,7 @@ def test_bughopper_v1_wake_up_pulses_vol_down(patch_usb_find, monkeypatch):
     patch_usb_find(device)
     monkeypatch.setattr(debugboard, "sleep", lambda s: None)
 
-    board = Board.create_board("S8", "./tac_configs")
+    board = Board.create_board("S8")
     bitmodes = []
     monkeypatch.setattr(board, "_ftdi_set_bitmode", bitmodes.append)
     board.wakeUp()

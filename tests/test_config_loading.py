@@ -1,176 +1,62 @@
 # Copyright (c) 2026 Qualcomm Technologies, Inc. and/or its subsidiaries.
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Tests that every config file can be loaded through the device dispatch in
-``pytactl.debugboard`` (the same path used by ``pytactl.shell`` and
-``pytactl.service``) and exposes the required quick methods: powerOn, powerOff,
-bootToEDL.
-
-Each config is loaded through the dispatch its own platform uses - FtdiBoard,
-PsocBoard or Pic32cxBoard - as selected by ``conftest.dispatch_for``.
-
-Special-cased configs (excluded boards, known-broken configs, configs that omit
-a function or reference a disabled pin) are declared centrally in conftest.py.
-"""
+"""Every bundled board file, driven through the board class its platform
+uses, with the hardware mocked: it loads, exposes its functions as quick
+methods and its pins as commands, and every function runs."""
 
 import os
 
 import pytest
-from conftest import (
-    XFAIL_EXECUTE,
-    XFAIL_LOAD,
-    XFAIL_REQUIRED,
-    config_params,
-    discover_configs,
-    load_board,
-    requires_bundled_configs,
-    requires_configs,
-)
+from conftest import BOARD_CLASSES, board_params, load_board
 
-from pytactl import debugboard
+from pytactl import boardconfig
 
-# The board class each dispatch is expected to produce, so a config routed to
-# the wrong path fails loudly instead of loading through a class that happens to
-# tolerate its contents.
-DISPATCH_BOARD_CLASS = {
-    "FTDI": debugboard.FtdiBoard,
-    "PSOC": debugboard.PsocBoard,
-    "PIC32CX": debugboard.Pic32cxBoard,
+# Quick methods most boards have, and the boards that do not, with why.
+REQUIRED_FUNCTIONS = ("powerOn", "powerOff", "bootToEDL")
+MISSING_REQUIRED = {
+    "ftdi-15.toml": ("powerOn", "powerOff"),  # CSM Lite: power functions only
+    "ftdi-16.toml": ("powerOn", "powerOff"),
+    "psoc-24.toml": ("powerOn", "powerOff"),
+    "ftdi-23.toml": ("powerOn", "powerOff", "bootToEDL"),  # M.2 card: no keys
+    "ftdi-69.toml": ("powerOn", "powerOff", "bootToEDL"),
+    "ftdi-29.toml": ("powerOn", "powerOff", "bootToEDL"),  # RF switch box
+    "ftdi-30.toml": ("powerOn", "powerOff", "bootToEDL"),  # power pins on a UART
+    "ftdi-42.toml": ("powerOn", "powerOff", "bootToEDL"),  # SMART LABEL: no script
+    "ftdi-56.toml": ("powerOn", "powerOff", "bootToEDL"),  # drives a missing usb1
+    "ftdi-67.toml": ("powerOn", "powerOff", "bootToEDL"),  # drives a missing usb1
+    "ftdi-73.toml": ("powerOn", "powerOff", "bootToEDL"),  # drives a missing usb1
+    "ftdi-41.toml": ("powerOn", "bootToEDL"),  # spowerOn/fpowerOn, two EDL entries
+    "ftdi-60.toml": ("powerOn", "powerOff"),
+    "psoc-31.toml": ("bootToEDL",),  # bootToNADEDL/bootToEAPEDL
 }
 
-# Functions that every config script is expected to define (unless explicitly
-# documented otherwise in XFAIL_REQUIRED).
-REQUIRED_FUNCTIONS = ("powerOn", "powerOff", "bootToEDL")
+
+@pytest.mark.parametrize("path", board_params())
+def test_board_loads_through_its_board_class(path, patch_usb_find, monkeypatch):
+    config = boardconfig.load_board(path)
+    board = load_board(path, patch_usb_find, monkeypatch)
+
+    assert isinstance(board, BOARD_CLASSES[config.platform])
+    assert board.config.path == config.path
+    for name in config.functions:
+        assert name in board.quick_methods
+        assert callable(getattr(board, name))
+    assert set(board.commands) == set(config.commands)
+    assert set(board.pins) == set(config.pins)
 
 
-@requires_configs
-def test_configs_exist():
-    """Guard against silently testing nothing if the config dir is present but
-    holds no testable configs.
-
-    Skipped outright when the external config set is unavailable (e.g. a distro
-    build environment); see ``resolve_config_dir`` in conftest.py.
-    """
-    assert discover_configs(), "no testable .pinout.json config files found"
+@pytest.mark.parametrize("path", board_params())
+def test_every_function_runs(path, patch_usb_find, monkeypatch):
+    """Each function of the board's script runs end to end through the mocked
+    hardware, as the REST API's QuickMethod wrapper calls it."""
+    board = load_board(path, patch_usb_find, monkeypatch)
+    for name in board.config.functions:
+        assert board.quick_methods[name].call() == {}
 
 
-@pytest.mark.parametrize("config_path", config_params(XFAIL_LOAD))
-def test_config_loads_via_usb_dispatch(
-    config_path, prepared_configs, patch_usb_find, monkeypatch
-):
-    """Each config loads cleanly when its matching device is plugged in."""
-    config_dir, entries = prepared_configs
-    entry = entries[os.path.basename(config_path)]
-
-    board = load_board(config_path, config_dir, entries, patch_usb_find, monkeypatch)
-
-    assert board is not None
-    # Dispatch routed the config to the board class that drives its platform.
-    assert isinstance(board, DISPATCH_BOARD_CLASS[entry.dispatch])
-    # The board was built from the config we asked for.
-    assert board.full_config["platform_type"] == entry.platform_type
-
-
-@pytest.mark.parametrize("config_path", config_params({**XFAIL_LOAD, **XFAIL_REQUIRED}))
-def test_required_functions_available(
-    config_path, prepared_configs, patch_usb_find, monkeypatch
-):
-    """powerOn, powerOff and bootToEDL are exposed as quick methods and as
-    callable attributes on every board built from a config file."""
-    config_dir, entries = prepared_configs
-    entry = entries[os.path.basename(config_path)]
-
-    board = load_board(config_path, config_dir, entries, patch_usb_find, monkeypatch)
-
-    for name in REQUIRED_FUNCTIONS:
-        assert name in board.quick_methods, (
-            f"{entry.name}: config script is missing required function '{name}'"
-        )
-        assert callable(getattr(board, name, None)), (
-            f"{entry.name}: '{name}' is not a callable bound method"
-        )
-
-
-@pytest.mark.parametrize("config_path", config_params({**XFAIL_LOAD, **XFAIL_EXECUTE}))
-def test_required_functions_execute(
-    config_path, prepared_configs, patch_usb_find, monkeypatch
-):
-    """Invoking each defined required quick method runs the parsed config script
-    end to end, driving pin writes through the (mocked) hardware without error.
-
-    Only functions the board actually defines are invoked, so configs that omit
-    one (XFAIL_REQUIRED) still exercise whatever they do define.
-    """
-    config_dir, entries = prepared_configs
-    entry = entries[os.path.basename(config_path)]
-
-    board = load_board(config_path, config_dir, entries, patch_usb_find, monkeypatch)
-
-    defined = [n for n in REQUIRED_FUNCTIONS if n in board.quick_methods]
-    if not defined:
-        # Omitting all three is a documented condition (XFAIL_REQUIRED); there is
-        # nothing to execute here, so don't fail this test for it too.
-        pytest.skip(f"{entry.name}: defines none of {REQUIRED_FUNCTIONS}")
-
-    for name in defined:
-        getattr(board, name)()
-
-
-@pytest.mark.parametrize("config_path", config_params({**XFAIL_LOAD, **XFAIL_EXECUTE}))
-def test_quick_method_call_wrapper(
-    config_path, prepared_configs, patch_usb_find, monkeypatch
-):
-    """The QuickMethod wrapper used by the REST API invokes defined methods
-    cleanly (returns {} on success, raises TACException on failure)."""
-    config_dir, entries = prepared_configs
-
-    board = load_board(config_path, config_dir, entries, patch_usb_find, monkeypatch)
-
-    for name in REQUIRED_FUNCTIONS:
-        if name in board.quick_methods:
-            assert board.quick_methods[name].call() == {}
-
-
-def test_ftdi_falls_back_to_default_config(
-    prepared_configs, patch_usb_find, monkeypatch
-):
-    """An FTDI device whose product string matches no catalog entry falls back
-    to the default.pinout.json config (the bundled FTDI Alpaca-Lite config,
-    platform_id 13, that 'installconfigs' installs under that name)."""
-    from conftest import FTDI_PRODUCT, FTDI_VENDOR, make_usb_device
-
-    from pytactl import debugboard
-
-    config_dir, _ = prepared_configs
-    device = make_usb_device(
-        FTDI_VENDOR, FTDI_PRODUCT, "UNKNOWN_SERIAL", product_str="No Such Descriptor"
-    )
-    patch_usb_find(device)
-
-    board = debugboard.Board.create_board("UNKNOWN_SERIAL", config_dir)
-
-    assert isinstance(board, debugboard.FtdiBoard)
-    assert board.full_config["platform_id"] == 13
-
-
-@requires_bundled_configs
-def test_ftdi_falls_back_to_the_bundled_default(patch_usb_find):
-    """The same fallback works against the config set shipped with the package,
-    where that config keeps its own name instead of being copied to
-    default.pinout.json."""
-    from conftest import FTDI_PRODUCT, FTDI_VENDOR, make_usb_device
-
-    import pytactl
-    from pytactl import debugboard
-
-    device = make_usb_device(
-        FTDI_VENDOR, FTDI_PRODUCT, "UNKNOWN_SERIAL", product_str="No Such Descriptor"
-    )
-    patch_usb_find(device)
-
-    board = debugboard.Board.create_board(
-        "UNKNOWN_SERIAL", pytactl.PACKAGE_TAC_CONFIG_PATH
-    )
-
-    assert isinstance(board, debugboard.FtdiBoard)
-    assert board.full_config["platform_id"] == 13
+@pytest.mark.parametrize("path", board_params())
+def test_required_functions(path):
+    config = boardconfig.load_board(path)
+    missing = tuple(name for name in REQUIRED_FUNCTIONS if name not in config.functions)
+    assert missing == MISSING_REQUIRED.get(os.path.basename(path), ())

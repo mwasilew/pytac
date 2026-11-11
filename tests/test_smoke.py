@@ -13,7 +13,7 @@ import os
 import pytest
 
 import pytactl
-from pytactl import cli
+from pytactl import boardconfig
 from pytactl.cli import build_parser, main
 
 
@@ -21,9 +21,9 @@ def test_version_is_defined():
     assert isinstance(pytactl.__version__, str) and pytactl.__version__
 
 
-def test_default_tac_config_path_points_into_package():
-    path = pytactl.PACKAGE_TAC_CONFIG_PATH
-    assert os.path.basename(path) == "tac_configs"
+def test_boards_dir_is_in_the_package():
+    path = boardconfig.BOARDS_DIR
+    assert os.path.basename(path) == "boards"
     assert path.startswith(os.path.dirname(pytactl.__file__))
     assert os.path.isdir(path)
 
@@ -34,35 +34,27 @@ def test_parser_dispatches_subcommand():
     assert args.mode == "list"
 
 
-def test_listconfigs_exits_nonzero_without_a_device_list(tmp_path, capsys):
+def test_listconfigs_exits_nonzero_without_board_files(tmp_path, capsys):
     with pytest.raises(SystemExit) as excinfo:
-        main(["listconfigs", "--tac-config-path", str(tmp_path)])
+        main(["listconfigs", "--boards-dir", str(tmp_path)])
     assert excinfo.value.code == 1
-    assert "Cannot read devicelist.json" in capsys.readouterr().out
+    assert "none" in capsys.readouterr().out
 
 
-def test_listconfigs_lists_the_bundled_configs(capsys):
-    main(["listconfigs", "--tac-config-path", pytactl.PACKAGE_TAC_CONFIG_PATH])
+def test_listconfigs_lists_the_bundled_boards(capsys):
+    main(["listconfigs"])
     out = capsys.readouterr().out
-    assert "bundled with pytactl" in out
-    assert pytactl.BUNDLED_DEFAULT_CONFIG_FILENAME in out
+    assert "ftdi-65" in out and "ALPACA-LITE MTP8975" in out
+    assert "INVALID" not in out
 
 
-def test_falling_back_to_installed_configs_warns(tmp_path, monkeypatch, caplog):
-    monkeypatch.setattr(cli, "INSTALLED_TAC_CONFIG_PATH", str(tmp_path))
-    monkeypatch.setattr(cli, "default_tac_config_path", lambda: str(tmp_path))
+def test_showconfig_says_where_things_come_from(capsys):
+    main(["showconfig", "ftdi-65"])
+    out = capsys.readouterr().out
+    assert "extends: ftdi, common, common-no-usb1, common-battery-edl" in out
+    assert "msmreset" in out and "bootToSecondaryEDL (removed)" in out
 
+
+def test_showconfig_of_an_unknown_board_fails(capsys):
     with pytest.raises(SystemExit):
-        main(["listconfigs"])
-
-    assert "deprecated 'installconfigs'" in caplog.text
-
-
-def test_explicit_config_path_does_not_warn(tmp_path, monkeypatch, caplog):
-    monkeypatch.setattr(cli, "INSTALLED_TAC_CONFIG_PATH", str(tmp_path))
-    monkeypatch.setattr(cli, "default_tac_config_path", lambda: str(tmp_path))
-
-    with pytest.raises(SystemExit):
-        main(["listconfigs", "--tac-config-path", str(tmp_path)])
-
-    assert "deprecated 'installconfigs'" not in caplog.text
+        main(["showconfig", "no-such-board"])
