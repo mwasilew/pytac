@@ -1,0 +1,17 @@
+# TAC_FTDI_29 of the upstream TAC config set.
+#
+# Left out of the upstream script, as they could only fail: powerOffTheDevice,
+# powerOnTheDevice, powerOff, powerOn, bootToEDL, bootToSecondaryEDL,
+# bootToUEFI, bootToFastboot (they drive battery, pedl, pkey, sedl, usb0,
+# voldn, volup, which this board has no pin for).
+
+name = "RF Switch Box"
+description = "ALPACA-LITE SWITCH CONTROL"
+usb_product = "ALPACA-LITE  SWITCH CONTROL"
+platform = "FTDI"
+gpio_buses = ["C"]
+
+[pins]
+C0 = "VC3"
+C1 = "VC1"
+C3 = "VC2"

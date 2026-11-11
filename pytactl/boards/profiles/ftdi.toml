@@ -1,0 +1,24 @@
+# Pin map of the FTDI (Alpaca) debug boards, as the ALPACA LITE default
+# (TAC_FTDI_13) has it. Buses C and D are GPIO ports; D6 (TC_READY_N) is held
+# high.
+
+platform = "FTDI"
+gpio_buses = ["C", "D"]
+
+[pins]
+C0 = "pshold"
+C1 = "uim1"
+C2 = "headset"
+C3 = "uim2"
+C4 = "sdcard"
+C5 = "sedl"
+C6 = "usb1"
+C7 = "sresn"
+D0 = "volup"
+D1 = "battery"
+D2 = "voldn"
+D3 = "pkey"
+D4 = "eud"
+D5 = "pedl"
+D6 = { command = "TC_READY_N", initial = 1 }
+D7 = "usb0"

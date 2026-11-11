@@ -1,0 +1,16 @@
+# TAC_FTDI_73 of the upstream TAC config set.
+#
+# Left out of the upstream script, as they could only fail: powerOffTheDevice,
+# powerOnTheDevice, bootToSecondaryEDL (they drive sedl, usb1, which this
+# board has no pin for), and powerOff, powerOn, bootToEDL, bootToUEFI,
+# bootToFastboot, which call them.
+
+name = "Maili MTP8950"
+description = "MTP8950 (Maili) FTDI IO"
+usb_product = "ALPACA-LITE MTP8950"
+extends = ["ftdi", "common-battery-edl"]
+
+[pins]
+C5 = "msmreset"
+C6 = "rcmsel"
+C7 = "uartsel"

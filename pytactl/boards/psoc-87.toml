@@ -1,0 +1,15 @@
+# TAC_PSOC_87 of the upstream TAC config set.
+
+name = "HAWI QRD"
+description = "HAWI QRD PSOC"
+board_id = 87
+extends = ["psoc", "common"]
+
+[pins]
+15 = { initial = 0 }
+29 = { initial = 0 }
+38 = { initial = 0 }
+39 = { initial = 0 }
+46 = { initial = 0 }
+48 = { initial = 0 }
+49 = { initial = 0 }

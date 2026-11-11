@@ -1,0 +1,16 @@
+# TAC_FTDI_21 of the upstream TAC config set.
+
+name = "KUNO IDP35"
+description = "ALPACA LITE IDP35"
+usb_product = "ALPACA-LITE IDP35"
+extends = ["ftdi", "common", "common-no-usb1"]
+
+[pins]
+C1 = "mode0"
+C2 = "volup"
+C3 = "mode1"
+C4 = "bootconfig2"
+C5 = "bootconfig0"
+C6 = "m2poff"
+C7 = "tcready"
+D0 = "sedl"

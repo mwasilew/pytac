@@ -1,0 +1,22 @@
+# TAC_PSOC_24 of the upstream TAC config set.
+
+name = "CSM - X100 - PSoC"
+description = "CSM - PSoC version"
+board_id = 24
+extends = ["psoc", "battery-pkey"]
+
+[pins]
+15 = "softreset"
+29 = "lowcurrentmode"
+38 = "BC_5"
+39 = "BC_6"
+46 = "RF_DIS"
+47 = "sdcarddis"
+56 = "ready"
+
+[functions]
+# This board has no powerOff.
+powerOff = false
+
+# This board has no powerOn.
+powerOn = false

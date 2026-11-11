@@ -1,0 +1,29 @@
+# TAC_FTDI_30 of the upstream TAC config set.
+#
+# The upstream config also maps D0 (volup), D1 (battery), D2 (voldn), D3
+# (pkey), D4 (eud), D5 (pedl), D6 (TC_READY_N), D7 (usb0), on buses that are
+# not GPIO ports here (B, C): they have never driven anything, and are left
+# out.
+#
+# Left out of the upstream script, as they could only fail: powerOffTheDevice,
+# powerOnTheDevice, powerOff, powerOn, bootToEDL, bootToSecondaryEDL,
+# bootToUEFI, bootToFastboot (they drive battery, pedl, pkey, usb0, voldn,
+# volup, which this board has no pin for).
+
+name = "Qualcomm AIR 8775"
+description = "Disable UART to collect BootKPI"
+usb_product = "ALPACA-LITE AIR 8775"
+extends = ["ftdi"]
+gpio_buses = ["B", "C"]
+
+[pins]
+B0 = { command = "MD_UART", initial = 1 }
+C0 = { command = "SAIL_UART", initial = 1 }
+D0 = false
+D1 = false
+D2 = false
+D3 = false
+D4 = false
+D5 = false
+D6 = false
+D7 = false

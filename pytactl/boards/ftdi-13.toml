@@ -1,0 +1,10 @@
+# TAC_FTDI_13 of the upstream TAC config set.
+
+name = "ALPACA LITE (FTDI)"
+description = "ALPACA LITE (FTDI)"
+fallback = true
+extends = ["ftdi", "common"]
+
+[timings]
+uefi = 20000
+fastboot = 1000

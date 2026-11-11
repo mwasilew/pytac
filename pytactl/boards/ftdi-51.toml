@@ -1,0 +1,15 @@
+# TAC_FTDI_51 of the upstream TAC config set.
+
+name = "Glymur CoB QCB"
+description = "ALPACA-LITE GLYMUR COB QCB"
+usb_product = "ALPACA-LITE GLYMUR COB QCB"
+extends = ["ftdi", "common", "common-usb3456"]
+
+[pins]
+C2 = "usb3456"
+C3 = "phybatt"
+C5 = "bc1high"
+
+[functions]
+# bootToSecondaryEDL drives sedl: it could only fail.
+bootToSecondaryEDL = false

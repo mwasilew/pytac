@@ -1,0 +1,15 @@
+# TAC_PSOC_74 of the upstream TAC config set.
+
+name = "Aliso CDP"
+description = "30-P9415-2 Dongle for Aliso"
+board_id = 74
+extends = ["psoc", "common"]
+
+[pins]
+15 = "eud"
+29 = { initial = 0 }
+38 = "pshold"
+39 = { initial = 0 }
+46 = { initial = 0 }
+48 = { initial = 0 }
+49 = { initial = 0 }

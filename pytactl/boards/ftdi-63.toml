@@ -1,0 +1,15 @@
+# TAC_FTDI_63 of the upstream TAC config set.
+#
+# The device list also gives this board the descriptor 'ALPACA-LITE FOR AR
+# V1', but an earlier entry, for TAC_FTDI_55.pinout.json, has it, so pytactl
+# never found this board by it.
+
+name = "Bonsai XRV7205"
+description = "AR TAC config for BONSAI"
+extends = ["ftdi", "common"]
+
+[pins]
+C1 = "back"
+C2 = false
+C3 = "rcmmarker0"
+C4 = false

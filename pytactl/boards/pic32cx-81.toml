@@ -1,0 +1,11 @@
+# TAC_PIC32CXAuto_81 of the upstream TAC config set.
+
+name = "Seca CoB STAR"
+description = "Seca CoB STAR"
+serial_prefix = "TORO"
+extends = ["pic32cx"]
+
+[timings]
+edl = 1500
+fastboot = 10000
+uefi = 10000

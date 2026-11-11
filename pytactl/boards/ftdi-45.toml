@@ -1,0 +1,55 @@
+# TAC_FTDI_45 of the upstream TAC config set.
+
+name = "Glymur SIP Lite"
+description = "Glymur SIP V2 Alpaca Lite"
+usb_product = "ALPACA-LITE SIP12 QCB8480X GLYMUR"
+extends = ["ftdi", "common"]
+
+[pins]
+C1 = false
+C2 = false
+C3 = false
+C5 = false
+
+[timings]
+rcmedl = 17000
+uefi = 500
+
+[functions]
+# bootToSecondaryEDL drives sedl: it could only fail.
+bootToSecondaryEDL = false
+
+bootToUEFI = """
+powerOffTheDevice
+// Put buttons in a set state
+pkey 0
+volup 0
+voldn 0
+pedl 0
+powerOnTheDevice
+delay $uefi
+pkey 1
+volup 1
+delay 4000
+pkey 0
+volup 0
+"""
+
+DisUSBVbus = """
+usb0 1
+usb1 1
+"""
+
+EnUSBVbus = """
+usb0 0
+usb1 0
+"""
+
+bootRCMToEDL = """
+pedl 1
+delay 18000
+voldn 1
+delay $rcmedl
+pedl 0
+voldn 0
+"""

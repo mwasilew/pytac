@@ -1,0 +1,87 @@
+# Pin map and functions of the boards powered through a single pwr_off line,
+# with sw_dnld/ss_force_edl boot straps (RIDE MICRO 4.0, IQ-9075 and IQ-8275
+# EVKs). powerOffHold is how long the board stays off in every power cycle.
+
+platform = "FTDI"
+gpio_buses = ["C", "D"]
+
+[pins]
+C0 = "ms_ps_hold"
+C1 = "mode0"
+C2 = "md_resout"
+C3 = "mode1"
+C4 = "ss_force_edl"
+C5 = "usb2"
+C6 = "usb1"
+C7 = "sail_ps_hold"
+D0 = "uefi"
+D1 = "pwr_off"
+D2 = "pmic_resin"
+D3 = "kpd_pwr"
+D4 = "eud_en"
+D5 = "sw_dnld"
+D6 = { command = "oe", initial = 1 }
+D7 = "usb0"
+
+[timings]
+powerOffHold = 1500
+edl = 5000
+secondaryEdl = 5000
+uefi = 8000
+fastbootUsbDelay = 500
+fastboot = 8000
+
+[functions]
+powerOn = """
+pwr_off 0
+"""
+
+powerOff = """
+pwr_off 1
+"""
+
+reset = """
+powerOff
+delay $powerOffHold
+powerOn
+"""
+
+bootToEDL = """
+powerOff
+sw_dnld 1
+ss_force_edl 1
+delay $powerOffHold
+powerOn
+delay $edl
+sw_dnld 0
+ss_force_edl 0
+"""
+
+bootToSecondaryEDL = """
+powerOff
+ss_force_edl 1
+delay $powerOffHold
+powerOn
+delay $secondaryEdl
+ss_force_edl 0
+"""
+
+bootToUEFI = """
+reset
+kpd_pwr 0
+uefi 1
+kpd_pwr 1
+delay $uefi
+kpd_pwr 0
+uefi 0
+"""
+
+bootToFastboot = """
+powerOff
+delay $powerOffHold
+usb2 1
+delay $fastbootUsbDelay
+powerOn
+delay $fastboot
+usb2 0
+"""

@@ -1,0 +1,14 @@
+# TAC_FTDI_36 of the upstream TAC config set.
+
+name = "XR TAC Config"
+description = "XR TAC Config for Matrix v2"
+usb_product = "ALPACA-LITE FOR XR V1"
+extends = ["ftdi", "common"]
+
+[pins]
+C1 = "back"
+C2 = "confirm"
+C3 = "rcmkarker0"
+
+[timings]
+fastboot = 12000

@@ -1,0 +1,125 @@
+# Pin map and functions of the PIC32CX boards. powerOffHold is how long the
+# battery stays disconnected in every power cycle; edl and fastboot serve both
+# the primary and the secondary sequence.
+
+platform = "PIC32CX"
+
+[pins]
+3 = "iic2"
+4 = "battery"
+6 = "kkpwr"
+7 = "pshold"
+10 = "sresn"
+11 = "pmspwr"
+16 = "uefi"
+20 = "pkey"
+21 = "pcie0"
+27 = "pcie1"
+101 = "pcie2"
+102 = "pcie3"
+103 = "iic10"
+110 = "kratos"
+111 = "iic4"
+114 = "qccbld"
+115 = "bbbld"
+116 = "sfastboot"
+117 = "iic5"
+118 = "inputvr4p5"
+119 = "inputvr3p3"
+120 = "forcemdpshold"
+121 = "forcesspshold"
+128 = "usb0"
+129 = "pgood"
+205 = "usb2"
+206 = "inputpwr"
+207 = "mode0"
+215 = "mode1"
+216 = "pedl"
+219 = "sedl"
+221 = "iic13"
+224 = "inputpoff"
+225 = "inputpms"
+226 = "bbblden"
+227 = "qccblden"
+228 = "mode2"
+311 = "eud"
+312 = "usb1"
+320 = "iic7"
+321 = "fastboot"
+
+[timings]
+powerOffHold = 900
+edl = 2500
+uefi = 13000
+fastboot = 12000
+
+[functions]
+powerOff = """
+battery 1
+"""
+
+powerOn = """
+battery 1
+delay $powerOffHold
+battery 0
+"""
+
+bootToEDL = """
+sedl 0
+uefi 0
+battery 1
+pedl 1
+delay $powerOffHold
+battery 0
+delay $edl
+pedl 0
+"""
+
+bootToSecondaryEDL = """
+pedl 0
+uefi 0
+battery 1
+sedl 1
+delay $powerOffHold
+battery 0
+delay $edl
+sedl 0
+"""
+
+bootToUEFI = """
+kkpwr 1
+uefi 1
+battery 1
+delay $powerOffHold
+battery 0
+delay $uefi
+uefi 0
+kkpwr 0
+"""
+
+bootToFastboot = """
+pedl 0
+sedl 0
+uefi 0
+sfastboot 0
+battery 1
+fastboot 1
+delay $powerOffHold
+battery 0
+delay $fastboot
+fastboot 0
+"""
+
+bootToSecondaryFastboot = """
+pedl 0
+sedl 0
+uefi 0
+battery 1
+sfastboot 1
+fastboot 1
+delay $powerOffHold
+battery 0
+delay $fastboot
+sfastboot 0
+fastboot 0
+"""

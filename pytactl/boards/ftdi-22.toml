@@ -1,0 +1,9 @@
+# TAC_FTDI_22 of the upstream TAC config set.
+
+name = "SDX75 QMP"
+description = "FTDI-LITE SDX75 QMP"
+usb_product = "ALPACA-LITE SDX75 QMP"
+extends = ["ftdi", "common", "common-no-usb1"]
+
+[timings]
+fastbootPress = 12000

@@ -1,0 +1,45 @@
+# TAC_FTDI_20 of the upstream TAC config set.
+
+name = "SDX75 CPE"
+description = "FTDI-LITE SDX75 CPE"
+usb_product = "ALPACA-LITE SDX75 CPE"
+extends = ["ftdi", "common", "common-no-usb1"]
+
+[functions]
+bootToUEFI = """
+powerOffTheDevice
+// Put buttons in a set state
+pkey 0
+volup 1
+voldn 0
+pedl 0
+powerOnTheDevice
+pkey 1
+delay 8000
+pkey 0
+volup 0
+//	delay 12
+//	pkey 1
+//	volup 1
+//	pkey 0
+//	volup 0
+"""
+
+bootToFastboot = """
+powerOffTheDevice
+delay 300
+battery 0
+pkey 0
+volup 0
+voldn 1
+//	pedl 0
+//	 powerOnTheDevice
+pkey 1
+delay 2000
+pkey 0
+delay 5000
+voldn 0
+// 	delay 30
+//	voldn 1
+//	voldn 0
+"""

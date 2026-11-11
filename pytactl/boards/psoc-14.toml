@@ -1,0 +1,26 @@
+# TAC_PSOC_14 of the upstream TAC config set.
+
+name = "CSM - PSoC"
+description = "CSM - PSoC version"
+board_id = 14
+extends = ["psoc", "battery-pkey"]
+
+[pins]
+15 = "softreset"
+29 = "lowcurrentmode"
+38 = "BC_5"
+39 = "BC_6"
+46 = "RF_DIS"
+47 = "sdcarddis"
+56 = "ready"
+
+[timings]
+uefi = 2100
+
+[functions]
+bootToFastboot = """
+powerOffTheDevice
+powerOnTheDevice
+delay 3100
+pkey 0
+"""

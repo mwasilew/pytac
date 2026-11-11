@@ -1,0 +1,30 @@
+# TAC_FTDI_15 of the upstream TAC config set.
+
+name = "CSM Lite"
+description = "CSM - Lite"
+usb_product = "ALPACA-LITE CSM DEBUG BOARD"
+extends = ["ftdi", "battery-pkey"]
+
+[pins]
+C1 = "watchdog"
+C2 = "bc1"
+C3 = "bc2"
+C4 = "bc3"
+C5 = "bc5"
+C6 = "bc6"
+C7 = "lassenreset"
+D0 = false
+D1 = { command = "battery", initial = 1 }
+D2 = "sysreset"
+D6 = false
+D7 = "ddr"
+
+[functions]
+# This board has no powerOff.
+powerOff = false
+
+# This board has no powerOn.
+powerOn = false
+
+# bootToFastboot drives voldn; drives volup: it could only fail.
+bootToFastboot = false

@@ -1,0 +1,12 @@
+# TAC_PIC32CXAuto_85 of the upstream TAC config set.
+#
+# The upstream config also gives mode0 to 207, pshold to 0. pytactl has always
+# driven the last pin given a command, which is the one that keeps it here.
+
+name = "IQ10 RRD V1"
+description = "IQ10 RRD V1"
+serial_prefix = "IQ10rrd"
+extends = ["pic32cx"]
+
+[pins]
+217 = "mode0"

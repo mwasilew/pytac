@@ -1,0 +1,33 @@
+# For MTPs that reset themselves while volume-down is held: adds
+# bootToBatteryEDL and batteryReset, which enter EDL or restart the board
+# without cutting the battery. Both hold voldn for batteryResetHold, press the
+# power key for batteryResetPress and release voldn batteryResetRelease later.
+
+[timings]
+batteryResetHold = 14000
+batteryResetPress = 1300
+batteryResetRelease = 6000
+
+[functions]
+bootToBatteryEDL = """
+pedl 1
+voldn 1
+delay $batteryResetHold
+pkey 1
+delay $batteryResetPress
+pkey 0
+delay $batteryResetRelease
+voldn 0
+pedl 0
+"""
+
+batteryReset = """
+pedl 0
+voldn 1
+delay $batteryResetHold
+pkey 1
+delay $batteryResetPress
+pkey 0
+delay $batteryResetRelease
+voldn 0
+"""

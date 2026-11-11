@@ -1,0 +1,21 @@
+# For boards that switch only one USB line: replaces the two power functions
+# of common.
+
+[timings]
+powerOffHold = 500
+batteryDelay = 900
+usbDelay = 30
+
+[functions]
+powerOffTheDevice = """
+battery 1
+usb0 1
+"""
+
+powerOnTheDevice = """
+delay $powerOffHold
+battery 0
+delay $batteryDelay
+usb0 0
+delay $usbDelay
+"""

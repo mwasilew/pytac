@@ -1,0 +1,115 @@
+# TAC_PSOC_31 of the upstream TAC config set.
+
+name = "CCARD525"
+description = "CCARD525 PSoC"
+board_id = 31
+extends = ["psoc"]
+
+[pins]
+15 = "sftrst"
+21 = { initial = 0 }
+29 = { initial = 0 }
+30 = "EAPedl"
+31 = "EAPres"
+36 = "EAPusb"
+38 = { initial = 0 }
+39 = { initial = 0 }
+46 = { initial = 0 }
+53 = "poweroff12v"
+54 = "NADedl"
+55 = "NADusb"
+
+[functions]
+powerOffTheDevice = """
+poweroff12v 1
+NADusb 1
+EAPusb 1
+"""
+
+powerOnTheDevice = """
+delay 500
+poweroff12v 0
+delay 900
+NADusb 0
+EAPusb 0
+delay 30
+"""
+
+powerOff = """
+powerOffTheDevice
+pkey 0
+volup 0
+voldn 0
+NADedl 0
+"""
+
+powerOn = """
+powerOff
+powerOnTheDevice
+pkey 1
+delay 800
+pkey 0
+"""
+
+bootToNADEDL = """
+powerOffTheDevice
+pkey 0
+volup 0
+voldn 0
+NADedl 1
+powerOnTheDevice
+pkey 1
+delay 1300
+pkey 0
+NADedl 0
+"""
+
+bootToEAPEDL = """
+powerOffTheDevice
+pkey 0
+volup 0
+voldn 0
+EAPedl 1
+powerOnTheDevice
+pkey 1
+delay 800
+pkey 0
+delay 1300
+EAPedl 0
+"""
+
+bootToUEFI = """
+powerOffTheDevice
+// Put buttons in a set state
+pkey 0
+volup 1
+voldn 0
+NADedl 0
+powerOnTheDevice
+pkey 1
+delay 8000
+pkey 0
+volup 0
+delay 12
+pkey 1
+volup 1
+pkey 0
+volup 0
+"""
+
+bootToFastboot = """
+powerOffTheDevice
+pkey 0
+volup 0
+voldn 1
+NADedl 0
+powerOnTheDevice
+pkey 1
+delay 800
+pkey 0
+delay 8000
+voldn 0
+delay 30
+voldn 1
+voldn 0
+"""

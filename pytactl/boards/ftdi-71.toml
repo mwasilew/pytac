@@ -1,0 +1,13 @@
+# TAC_FTDI_71 of the upstream TAC config set.
+#
+# The upstream config also maps A0 (s2_force_md_ps_hold), B0 (s2_uefi), A1
+# (s2_mode0), B1 (s2_force_classic), A2 (s2_md_resout), B2 (s2_pmic_resin), A3
+# (s2_mode1), B3 (s2_kpd_pwr), A4 (s2_ss_force_edl), B4 (s2_eud_en), A5
+# (s2_usb2_disc), B5 (s2_sw_dnld), A6 (s2_usb1_disc), A7
+# (s2_force_ss_ps_hold), B7 (s2_usb0_disc), on buses that are not GPIO ports
+# here (C, D): they have never driven anything, and are left out.
+
+name = "RB4 IQ-8275-EVK"
+description = "FTDI TAC for RB4 IQ-8275-EVK"
+usb_product = "ALPACA-LITE FOR RB4 IQ-8275-EVK"
+extends = ["pwr-off"]

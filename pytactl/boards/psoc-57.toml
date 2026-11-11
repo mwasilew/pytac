@@ -1,0 +1,87 @@
+# TAC_PSOC_57 of the upstream TAC config set.
+
+name = "Monaco/Lemans RIDE MCU Less ADP Automotive"
+description = "Monaco/Lemans ADP Automotive"
+board_id = 57
+extends = ["psoc"]
+
+[pins]
+15 = "eud"
+16 = { initial = 0 }
+29 = "fastpoff"
+31 = "sdcard"
+37 = { initial = 0 }
+38 = "pshold"
+39 = "sresn"
+46 = { initial = 0 }
+48 = "wakein"
+49 = { command = "fastboot", initial = 1 }
+
+[timings]
+Optional_GPIO_Hold_Time = 0
+
+[functions]
+powerOff = """
+battery 1
+"""
+
+powerOn = """
+battery 0
+"""
+
+reset = """
+powerOff
+delay 1500
+powerOn
+"""
+
+bootToEDL = """
+powerOff
+pedl 1
+sdcard 1
+delay 1500
+powerOn
+delay 5000
+delay $Optional_GPIO_Hold_Time
+pedl 0
+sdcard 0
+"""
+
+bootToUEFI = """
+reset
+volup 1
+delay 1000
+pkey 1
+voldn 0
+pedl 0
+delay 8000
+delay $Optional_GPIO_Hold_Time
+pkey 0
+volup 0
+delay 12
+pkey 1
+volup 1
+pkey 0
+volup 0
+"""
+
+bootToFastboot = """
+powerOff
+delay 20
+fastboot 0
+powerOn
+delay 2000
+fastboot 1
+"""
+
+WAKEIN = """
+wakein 1
+delay 50
+wakein 0
+"""
+
+mculesspoff = """
+fastpoff 1
+delay 50
+fastpoff 0
+"""

@@ -1,0 +1,74 @@
+# TAC_PSOC_17 of the upstream TAC config set.
+
+name = "Lemans ADP Automotive"
+description = "Lemans ADP TAC PSOC"
+board_id = 17
+extends = ["psoc"]
+
+[pins]
+15 = "eud"
+16 = { initial = 0 }
+29 = "uart_dis"
+31 = "sdcard"
+37 = { initial = 0 }
+38 = "pshold"
+39 = "sresn"
+46 = { initial = 0 }
+
+[timings]
+Optional_GPIO_Hold_Time = 0
+
+[functions]
+powerOff = """
+battery 1
+"""
+
+powerOn = """
+battery 0
+"""
+
+reset = """
+powerOff
+delay 1500
+powerOn
+"""
+
+bootToEDL = """
+powerOff
+pedl 1
+sdcard 1
+delay 1500
+powerOn
+delay 5000
+delay $Optional_GPIO_Hold_Time
+pedl 0
+sdcard 0
+"""
+
+bootToUEFI = """
+reset
+volup 1
+delay 1000
+pkey 1
+voldn 0
+pedl 0
+delay 8000
+delay $Optional_GPIO_Hold_Time
+pkey 0
+volup 0
+delay 12
+pkey 1
+volup 1
+pkey 0
+volup 0
+"""
+
+bootToFastboot = """
+powerOff
+voldn 1
+delay 1500
+powerOn
+delay 8000
+delay $Optional_GPIO_Hold_Time
+voldn 0
+"""

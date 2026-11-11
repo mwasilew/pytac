@@ -1,0 +1,17 @@
+# TAC_PSOC_7 of the upstream TAC config set.
+
+name = "Alpaca V3.1"
+description = "Alpaca V3.1"
+board_id = 7
+extends = ["psoc", "common"]
+
+[pins]
+15 = { initial = 0 }
+29 = { initial = 0 }
+38 = { initial = 0 }
+39 = { initial = 0 }
+46 = { initial = 0 }
+
+[timings]
+edlRelease = 10000
+fastbootPress = 8000

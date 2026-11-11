@@ -1,0 +1,15 @@
+# TAC_FTDI_33 of the upstream TAC config set.
+
+name = "ALPACA-LITE QCX217"
+description = "ALPACA-LITE QCX217"
+usb_product = "ALPACA-LITE QCX217"
+extends = ["ftdi", "common", "common-no-usb1"]
+
+[pins]
+C0 = false
+C2 = false
+C7 = false
+
+[timings]
+fastbootPress = 2000
+fastboot = 6000

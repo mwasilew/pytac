@@ -1,0 +1,17 @@
+# TAC_FTDI_69 of the upstream TAC config set.
+#
+# Left out of the upstream script, as they could only fail: powerOff, powerOn,
+# bootToEDL, bootToSecondaryEDL, bootToUEFI, bootToFastboot (they drive pkey,
+# voldn, volup, which this board has no pin for).
+
+name = "SDX95 M.2"
+description = "FTDI-LITE SDX95 M.2"
+usb_product = "ALPACA-LITE SDX95 M.2"
+extends = ["ftdi", "common-no-usb1"]
+
+[pins]
+C4 = "pciehostbypass"
+D0 = "usbboot"
+D2 = "m2reset"
+D3 = "fcpo"
+D6 = false

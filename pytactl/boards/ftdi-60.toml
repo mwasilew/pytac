@@ -1,0 +1,60 @@
+# TAC_FTDI_60 of the upstream TAC config set.
+
+name = "Glymur Battery Enabled Device"
+description = "Glymur Battery Enabled Device"
+usb_product = "ALPACA-LITE GLYMUR CRD BATTERY"
+extends = ["ftdi"]
+
+[timings]
+edl = 17000
+reset = 20000
+uefi = 20000
+
+[functions]
+reset = """
+usb0 1
+usb1 1
+pkey 0
+volup 0
+voldn 0
+pedl 0
+delay 900
+usb0 0
+usb1 0
+delay 30
+pkey 1
+delay $reset
+pkey 0
+"""
+
+bootToEDL = """
+usb0 1
+usb1 1
+pkey 0
+volup 0
+voldn 0
+pedl 1
+delay 900
+usb0 0
+usb1 0
+delay 30
+pkey 1
+delay $edl
+pkey 0
+pedl 0
+"""
+
+bootToUEFI = """
+// Put buttons in a set state
+pkey 0
+pedl 0
+volup 0
+delay 900
+pkey 1
+delay 900
+volup 1
+delay $uefi
+volup 0
+delay 900
+pkey 0
+"""

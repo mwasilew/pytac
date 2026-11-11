@@ -1,0 +1,137 @@
+# TAC_FTDI_41 of the upstream TAC config set.
+
+name = "SDX-SM_FUSION ATP DEBUG BOARD"
+description = "ALPACA-LITE for AP-MDM Fusion ATP debug board"
+usb_product = "ALPACA-LITE SDX_FUS_ATP"
+extends = ["ftdi"]
+
+[pins]
+C1 = "sresn"
+C2 = "sedl"
+C3 = "jtagsel"
+C4 = "uartsel"
+C5 = "softpdn"
+C6 = "usbsel"
+C7 = "tcready"
+D1 = "power"
+D4 = "spkey"
+D6 = "fssel"
+
+[functions]
+powerOffTheDevice = """
+power 1
+usb0 1
+//usb1 1
+"""
+
+powerOnTheDevice = """
+delay 500
+power 0
+delay 900
+usb0 0
+//usb1 0
+delay 30
+"""
+
+powerOff = """
+powerOffTheDevice
+pkey 0
+spkey 0
+volup 0
+voldn 0
+sresn 0
+fssel 0
+jtagsel 0
+uartsel 0
+usbsel 0
+pedl 0
+sedl 0
+"""
+
+fpowerOn = """
+powerOff
+fssel 0
+jtagsel 0
+uartsel 0
+usbsel 0
+powerOnTheDevice
+pkey 1
+delay 800
+pkey 0
+"""
+
+spowerOn = """
+powerOff
+fssel 1
+jtagsel 1
+uartsel 1
+usbsel 1
+powerOnTheDevice
+spkey 1
+delay 800
+spkey 0
+"""
+
+bootToAPQEDL = """
+powerOffTheDevice
+pkey 0
+volup 0
+voldn 0
+pedl 1
+powerOnTheDevice
+pkey 1
+delay 1300
+pkey 0
+pedl 0
+"""
+
+bootToSDXEDL = """
+powerOffTheDevice
+spkey 0
+//sresn 0
+fssel 1
+jtagsel 1
+uartsel 1
+usbsel 1
+sedl 1
+powerOnTheDevice
+spkey 1
+delay 1500
+spkey 0
+sedl 0
+"""
+
+bootToUEFI = """
+powerOffTheDevice
+// Put buttons in a set state
+pkey 0
+volup 1
+voldn 0
+pedl 0
+powerOnTheDevice
+pkey 1
+delay 8000
+pkey 0
+volup 0
+delay 12
+pkey 1
+pkey 0
+volup 0
+"""
+
+bootToFastboot = """
+powerOffTheDevice
+pkey 0
+volup 0
+voldn 1
+pedl 0
+powerOnTheDevice
+pkey 1
+delay 800
+pkey 0
+delay 1500
+voldn 0
+delay 30
+voldn 1
+voldn 0
+"""

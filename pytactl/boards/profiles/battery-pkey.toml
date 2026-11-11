@@ -1,0 +1,79 @@
+# Functions of boards whose power functions switch the battery and the power
+# key together (the CSM boards).
+
+[timings]
+powerOffHold = 500
+powerOnDelay = 900
+powerKeyDelay = 500
+edl = 3000
+eud = 3000
+uefi = 2000
+fastbootPress = 8000
+fastboot = 8000
+fastbootRepeatDelay = 30
+
+[functions]
+powerOffTheDevice = """
+battery 1
+pkey 0
+"""
+
+powerOnTheDevice = """
+delay $powerOffHold
+battery 0
+pkey 1
+delay $powerOnDelay
+"""
+
+powerOff = """
+powerOffTheDevice
+pkey 0
+pedl 0
+"""
+
+powerOn = """
+powerOnTheDevice
+delay $powerKeyDelay
+pkey 1
+pkey 0
+"""
+
+bootToEDL = """
+powerOffTheDevice
+pedl 1
+powerOnTheDevice
+delay $edl
+pedl 0
+"""
+
+bootToEUD = """
+powerOffTheDevice
+eud 1
+powerOnTheDevice
+delay $eud
+eud 0
+"""
+
+bootToUEFI = """
+powerOffTheDevice
+powerOnTheDevice
+delay $uefi
+pkey 0
+"""
+
+bootToFastboot = """
+powerOffTheDevice
+pkey 0
+volup 0
+voldn 1
+pedl 0
+powerOnTheDevice
+pkey 1
+delay $fastbootPress
+pkey 0
+delay $fastboot
+voldn 0
+delay $fastbootRepeatDelay
+voldn 1
+voldn 0
+"""

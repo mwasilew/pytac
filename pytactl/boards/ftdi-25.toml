@@ -1,0 +1,63 @@
+# TAC_FTDI_25 of the upstream TAC config set.
+
+name = "ALPACA-LITE SDX35 M.2"
+description = "ALPACA-LITE SDX35 M.2"
+usb_product = "ALPACA-LITE SDX35 M.2"
+extends = ["ftdi"]
+
+[pins]
+C1 = false
+C2 = false
+C3 = false
+C4 = false
+C6 = false
+C7 = "tcready"
+D0 = "sedl"
+D2 = "m2rst"
+D3 = "voldn"
+D4 = "pciehb"
+
+[functions]
+powerOffTheDevice = """
+battery 1
+usb0 1
+"""
+
+powerOnTheDevice = """
+delay 500
+battery 0
+delay 900
+usb0 0
+delay 30
+"""
+
+powerOff = """
+powerOffTheDevice
+voldn 0
+pedl 0
+"""
+
+powerOn = """
+powerOff
+powerOnTheDevice
+delay 800
+"""
+
+bootToEDL = """
+powerOffTheDevice
+voldn 0
+pedl 1
+powerOnTheDevice
+delay 1300
+pedl 0
+"""
+
+bootToSecondaryEDL = """
+powerOffTheDevice
+voldn 0
+sedl 1
+powerOnTheDevice
+delay 800
+delay 1300
+sedl 0
+"""

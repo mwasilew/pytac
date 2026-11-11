@@ -1,0 +1,17 @@
+# TAC_FTDI_42 of the upstream TAC config set.
+
+name = "ALPACA-LITE SMART LABEL"
+description = "ALPACA-LITE SMART LABEL"
+usb_product = "ALPACA-LITE SMART LABEL"
+platform = "FTDI"
+gpio_buses = ["D"]
+
+[pins]
+D0 = "SoCWakeUp"
+D1 = "TESICMODE2"
+D2 = "QCXRESIN"
+D3 = "pkey"
+D4 = "TESICMODE0"
+D5 = "TESICMODE1"
+D6 = { command = "TC_READY_N", initial = 1 }
+D7 = "MUXSEL"

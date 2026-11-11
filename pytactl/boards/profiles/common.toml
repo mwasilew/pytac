@@ -1,0 +1,114 @@
+# Functions of boards with the common battery/USB/power-key/volume-key/EDL
+# wiring. Every delay is a timing a board can change.
+
+[timings]
+powerOffHold = 500
+batteryDelay = 900
+usbDelay = 30
+powerKeyPress = 800
+edl = 1300
+edlRelease = 0
+secondaryEdlPress = 800
+secondaryEdl = 1300
+uefiPowerOnDelay = 0
+uefi = 8000
+uefiRepeatDelay = 12
+fastbootPress = 800
+fastboot = 8000
+fastbootRepeatDelay = 30
+
+[functions]
+powerOffTheDevice = """
+battery 1
+usb0 1
+usb1 1
+"""
+
+powerOnTheDevice = """
+delay $powerOffHold
+battery 0
+delay $batteryDelay
+usb0 0
+usb1 0
+delay $usbDelay
+"""
+
+powerOff = """
+powerOffTheDevice
+pkey 0
+volup 0
+voldn 0
+pedl 0
+"""
+
+powerOn = """
+powerOff
+powerOnTheDevice
+pkey 1
+delay $powerKeyPress
+pkey 0
+"""
+
+bootToEDL = """
+powerOffTheDevice
+pkey 0
+volup 0
+voldn 0
+pedl 1
+powerOnTheDevice
+pkey 1
+delay $edl
+pkey 0
+delay $edlRelease // optional
+pedl 0
+"""
+
+bootToSecondaryEDL = """
+powerOffTheDevice
+pkey 0
+volup 0
+voldn 0
+sedl 1
+powerOnTheDevice
+pkey 1
+delay $secondaryEdlPress
+pkey 0
+delay $secondaryEdl
+sedl 0
+"""
+
+bootToUEFI = """
+powerOffTheDevice
+pkey 0
+volup 1
+voldn 0
+pedl 0
+powerOnTheDevice
+delay $uefiPowerOnDelay // optional
+pkey 1
+delay $uefi
+pkey 0
+volup 0
+delay $uefiRepeatDelay
+pkey 1
+volup 1
+pkey 0
+volup 0
+"""
+
+bootToFastboot = """
+powerOffTheDevice
+pkey 0
+volup 0
+voldn 1
+pedl 0
+powerOnTheDevice
+pkey 1
+delay $fastbootPress
+pkey 0
+delay $fastboot
+voldn 0
+delay $fastbootRepeatDelay
+voldn 1
+voldn 0
+"""

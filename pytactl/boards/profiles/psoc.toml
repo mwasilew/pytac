@@ -1,0 +1,20 @@
+# Pin map of the PSOC debug boards, as most of them have it (TAC_PSOC_44).
+
+platform = "PSOC"
+
+[pins]
+16 = "eud"
+18 = "uim1"
+19 = "uim2"
+21 = "headset"
+30 = "sedl"
+31 = "sresn"
+34 = "volup"
+36 = "usb1"
+37 = "pshold"
+47 = "sdcard"
+50 = "pkey"
+51 = "voldn"
+53 = "battery"
+54 = "pedl"
+55 = "usb0"

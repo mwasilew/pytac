@@ -1,0 +1,21 @@
+# TAC_FTDI_19 of the upstream TAC config set.
+
+name = "Hamoa Lite"
+description = "Hamoa Lite"
+usb_product = "Hamoa Lite"
+extends = ["ftdi", "common"]
+
+[timings]
+uefi = 13000
+fastboot = 1000
+
+[functions]
+USBoff = """
+usb0 1
+usb1 1
+"""
+
+USBon = """
+usb0 0
+usb1 0
+"""

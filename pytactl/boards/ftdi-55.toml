@@ -1,0 +1,15 @@
+# TAC_FTDI_55 of the upstream TAC config set.
+#
+# The upstream config also gives pshold to C0, eud to C4. pytactl has always
+# driven the last pin given a command, which is the one that keeps it here.
+
+name = "Balsam SAR2230P"
+description = "AR TAC config for Balsam"
+usb_product = "ALPACA-LITE FOR AR V1"
+extends = ["ftdi", "common"]
+
+[pins]
+C1 = "back"
+C2 = "pshold"
+C3 = "rcmmarker0"
+C4 = false

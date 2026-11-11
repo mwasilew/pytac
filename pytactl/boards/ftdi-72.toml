@@ -1,0 +1,10 @@
+# TAC_FTDI_72 of the upstream TAC config set.
+
+name = "AmboseliAQ JTAG MUX DC"
+description = "JTAG MUX DC"
+usb_product = "TDP535_JTAG_MUX_DC"
+extends = ["ftdi", "common"]
+
+[pins]
+C7 = "ol_en"
+D6 = "TC_READY_N"

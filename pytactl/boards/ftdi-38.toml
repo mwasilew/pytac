@@ -1,0 +1,23 @@
+# TAC_FTDI_38 of the upstream TAC config set.
+
+name = "PAKALA CDP"
+description = "PAKALA CDP with GG GPIOs"
+usb_product = "ALPACA-LITE PAKALA CDP"
+extends = ["ftdi", "common", "common-no-usb1", "common-uefi-pkey-confirm"]
+
+[pins]
+C1 = "mode0_gg4"
+C2 = "gg2"
+C3 = "mode1_gg5"
+C4 = "sdcard_gg3"
+C5 = "gg1"
+C6 = false
+
+[timings]
+powerKeyPress = 3500
+fastbootPress = 2000
+fastboot = 6000
+
+[functions]
+# This board has no bootToSecondaryEDL.
+bootToSecondaryEDL = false

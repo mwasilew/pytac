@@ -1,0 +1,17 @@
+# TAC_FTDI_32 of the upstream TAC config set.
+
+name = "ATP SM-SC-SDX_NS DEBUG BOARD"
+description = "ALPACA-LITE for Mobile/Compute/Modem_NS ATP debug board"
+usb_product = "ALPACA-LITE SM_SC_SDX ATP"
+extends = ["ftdi", "common"]
+
+[pins]
+C2 = "leboot"
+C5 = "softpdn"
+C7 = "tcready"
+D4 = "valen"
+D6 = false
+
+[functions]
+# bootToSecondaryEDL drives sedl: it could only fail.
+bootToSecondaryEDL = false

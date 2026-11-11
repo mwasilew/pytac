@@ -1,0 +1,10 @@
+# TAC_FTDI_27 of the upstream TAC config set.
+
+name = "Lanai Debug"
+description = "Lanai FTDI debug board"
+usb_product = "ALPACA-LITE LANAI DEBUG BOARD"
+extends = ["ftdi", "common"]
+
+[timings]
+fastbootPress = 2000
+fastboot = 6000

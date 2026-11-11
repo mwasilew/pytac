@@ -1,0 +1,15 @@
+# TAC_PIC32CXAuto_54 of the upstream TAC config set.
+#
+# The upstream config also gives mode0 to 207. pytactl has always driven the
+# last pin given a command, which is the one that keeps it here.
+
+name = "NordAu RIDE"
+description = "NordAu RIDE"
+serial_prefix = ["KARUSSELL", "KARUSSELLV2"]
+extends = ["pic32cx"]
+
+[pins]
+118 = "sbattery"
+119 = "spshold"
+217 = "mode0"
+226 = "pcie0"

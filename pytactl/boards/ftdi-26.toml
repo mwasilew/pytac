@@ -1,0 +1,13 @@
+# TAC_FTDI_26 of the upstream TAC config set.
+
+name = "KUNO DEBUG BOARD"
+description = "ALPACA-LITE KUNO DEBUG BOARD"
+usb_product = "ALPACA-LITE KUNO DEBUG BOARD"
+extends = ["ftdi", "common", "common-no-usb1"]
+
+[pins]
+C7 = "tcready"
+
+[timings]
+fastbootPress = 2000
+fastboot = 6000

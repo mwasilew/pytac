@@ -1,0 +1,15 @@
+# TAC_FTDI_56 of the upstream TAC config set.
+#
+# Left out of the upstream script, as they could only fail: powerOffTheDevice,
+# powerOnTheDevice (they drive usb1, which this board has no pin for), and
+# powerOff, powerOn, bootToEDL, bootToUEFI, bootToFastboot, which call them.
+
+name = "Molokai MTP"
+description = "MTP8845 FTDI IO"
+usb_product = "ALPACA-LITE MTP8845"
+extends = ["ftdi"]
+
+[pins]
+C5 = "pshold_low"
+C6 = false
+C7 = false

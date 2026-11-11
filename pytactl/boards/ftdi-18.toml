@@ -1,0 +1,150 @@
+# TAC_FTDI_18 of the upstream TAC config set.
+
+name = "RIDE MX 4.0 Lite"
+description = "FTDI TAC for RIDE MX 4.0"
+usb_product = "RIDE MX 4.0 Lite"
+extends = ["pwr-off"]
+gpio_buses = ["A", "B", "C", "D"]
+
+[pins]
+A0 = "s2_force_md_ps_hold"
+A1 = "s2_mode0"
+A2 = "s2_md_resout"
+A3 = "s2_mode1"
+A4 = "s2_ss_force_edl"
+A5 = "s2_usb2_disc"
+A6 = "s2_usb1_disc"
+A7 = "s2_force_ss_ps_hold"
+B0 = "s2_uefi"
+B1 = "s2_force_classic"
+B2 = "s2_pmic_resin"
+B3 = "s2_kpd_pwr"
+B4 = "s2_eud_en"
+B5 = "s2_sw_dnld"
+B7 = "s2_usb0_disc"
+
+[timings]
+Optional_GPIO_Hold_Time = 0
+
+[functions]
+# This board has no bootToSecondaryEDL.
+bootToSecondaryEDL = false
+
+reset = """
+powerOff
+delay 1500
+powerOn
+"""
+
+bootToEDL = """
+sw_dnld 1
+ss_force_edl 1
+pmic_resin 1
+delay 1500
+pmic_resin 0
+delay 1000
+powerOn
+delay 5000
+delay $Optional_GPIO_Hold_Time
+sw_dnld 0
+ss_force_edl 0
+"""
+
+bootToUEFI = """
+pmic_resin 1
+delay 1500
+pmic_resin 0
+delay 1000
+kpd_pwr 0
+uefi 1
+sw_dnld 0
+kpd_pwr 1
+delay 8000
+delay $Optional_GPIO_Hold_Time
+kpd_pwr 0
+uefi 0
+"""
+
+bootToFastboot = """
+pmic_resin 1
+delay 1500
+pmic_resin 0
+delay 800
+pmic_resin 1
+delay 8000
+delay $Optional_GPIO_Hold_Time
+pmic_resin 0
+"""
+
+s1_reset = """
+pmic_resin 1
+delay 1500
+pmic_resin 0
+"""
+
+s2_reset = """
+s2_pmic_resin 1
+delay 1500
+s2_pmic_resin 0
+"""
+
+s2_md_sail_edl = """
+s2_sw_dnld 1
+s2_ss_force_edl 1
+s2_pmic_resin 1
+delay 1500
+s2_pmic_resin 0
+delay 1000
+powerOn
+delay 5000
+delay $Optional_GPIO_Hold_Time
+s2_sw_dnld 0
+s2_ss_force_edl 0
+"""
+
+s2_uefi_sequence = """
+s2_pmic_resin 1
+delay 1500
+s2_pmic_resin 0
+delay 1000
+s2_kpd_pwr 0
+s2_uefi 1
+s2_sw_dnld 0
+s2_kpd_pwr 1
+delay 8000
+delay $Optional_GPIO_Hold_Time
+s2_kpd_pwr 0
+s2_uefi 0
+"""
+
+s2_fastboot = """
+s2_pmic_resin 1
+delay 1500
+s2_pmic_resin 0
+delay 800
+s2_pmic_resin 1
+delay 8000
+delay $Optional_GPIO_Hold_Time
+s2_pmic_resin 0
+"""
+
+s2_Hboot_EDL_HOLD = """
+s2_sw_dnld 1
+s2_ss_force_edl 1
+"""
+
+s2_Hboot_EDL_RELEASE = """
+s2_sw_dnld 0
+s2_ss_force_edl 0
+"""
+
+classic_mode_set = """
+s2_force_classic 1
+powerOff
+delay 1500
+powerOn
+"""
+
+hboot_mode_set = """
+s2_force_classic 0
+"""

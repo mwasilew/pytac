@@ -1,0 +1,50 @@
+# TAC_PSOC_35 of the upstream TAC config set.
+
+name = "RB5"
+description = "RB5"
+board_id = 35
+extends = ["psoc", "common"]
+
+[pins]
+15 = { initial = 0 }
+29 = { initial = 0 }
+38 = { initial = 0 }
+39 = { initial = 0 }
+46 = { initial = 0 }
+
+[timings]
+edl = 20000
+fastboot1 = 10000
+fastboot2 = 10000
+powerDelay = 2000
+
+[functions]
+powerOn = """
+powerOnTheDevice
+delay 30
+pkey 1
+delay $powerDelay
+pkey 0
+"""
+
+bootToEDL = """
+pkey 0
+volup 0
+voldn 0
+pedl 1
+pkey 1
+delay $edl
+pkey 0
+pedl 0
+"""
+
+bootToFastboot = """
+powerOnTheDevice
+pkey 1
+delay 800
+voldn 1
+delay $fastboot1
+pkey 0
+delay $fastboot2
+voldn 0
+"""

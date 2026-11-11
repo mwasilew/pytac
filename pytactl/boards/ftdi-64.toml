@@ -1,0 +1,6 @@
+# TAC_FTDI_64 of the upstream TAC config set.
+
+name = "SDX95 QMP"
+description = "FTDI-LITE SDX95 QMP"
+usb_product = "ALPACA-LITE SDX95 QMP"
+extends = ["ftdi", "common", "common-no-usb1"]

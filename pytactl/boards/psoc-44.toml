@@ -1,0 +1,6 @@
+# TAC_PSOC_44 of the upstream TAC config set.
+
+name = "Kanapali QRD"
+description = "Kanapali QRD"
+board_id = 44
+extends = ["psoc", "common"]

@@ -1,0 +1,17 @@
+# TAC_FTDI_49 of the upstream TAC config set.
+
+name = "Glymur COB CDPS"
+description = "Glymur COB CDPS"
+usb_product = "ALPACA-LITE GLYMUR COB CDPS"
+extends = ["ftdi", "common"]
+
+[pins]
+C1 = "mode0"
+C2 = "gg2"
+C3 = "mode1"
+C5 = "gg1"
+C7 = "voldn"
+
+[functions]
+# bootToSecondaryEDL drives sedl: it could only fail.
+bootToSecondaryEDL = false

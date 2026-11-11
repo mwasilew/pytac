@@ -1,0 +1,57 @@
+# TAC_FTDI_67 of the upstream TAC config set.
+#
+# Left out of the upstream script, as they could only fail: powerOffTheDevice,
+# powerOnTheDevice, bootToSecondaryEDL (they drive sedl, usb1, which this
+# board has no pin for), and powerOff, powerOn, bootToEDL, bootToUEFI,
+# bootToFastboot, powerCycle, which call them.
+
+name = "AmboseliAQ Lite"
+description = "TDP535 Platform Config"
+usb_product = "ALPACA-LITE TDP535 BOARD"
+extends = ["ftdi"]
+gpio_buses = ["A", "B", "C", "D"]
+
+[pins]
+A0 = "bc0"
+A1 = "bc1"
+A2 = "bc2"
+A3 = "bc3"
+A5 = "bc5"
+A6 = "bc6"
+A7 = "bc7"
+B0 = "bc8"
+B1 = "bc9"
+B2 = "TBD"
+B3 = "uim0"
+B4 = "uim1"
+B5 = "esim"
+B6 = "smuxs2"
+B7 = "smuxs1"
+C1 = "mode0"
+C2 = "emmc_boot"
+C3 = "mode1"
+C4 = "emmc"
+C5 = "sdcard"
+C6 = "isim_nvm"
+C7 = "tcready"
+
+[functions]
+enASM = """
+smuxs1 1
+smuxs2 1
+"""
+
+enS230 = """
+smuxs1 0
+smuxs2 1
+"""
+
+enIAM = """
+smuxs1 1
+smuxs2 0
+"""
+
+enS330 = """
+smuxs1 0
+smuxs2 0
+"""

@@ -1,0 +1,11 @@
+# TAC_FTDI_48 of the upstream TAC config set.
+
+name = "Kaanapali MTP"
+description = "MTP8850 FTDI IO"
+usb_product = "ALPACA-LITE MTP8850"
+extends = ["ftdi", "common", "common-battery-edl"]
+
+[timings]
+uefiPowerOnDelay = 1500
+fastbootPress = 2000
+fastboot = 6000

@@ -1,0 +1,114 @@
+# TAC_FTDI_77 of the upstream TAC config set.
+#
+# Left out of the upstream script, as they could only fail: bootToSecondaryEDL
+# (it drives sedl, which this board has no pin for).
+
+name = "KARNALI QCB DT"
+description = "ALPACA-LITE KARNALI QCB DT"
+usb_product = "ALPACA-LITE KARNALI QCB DT"
+extends = ["ftdi"]
+
+[pins]
+C1 = "pmkpon"
+C2 = "usb3456"
+C3 = "FPPower"
+C4 = "FPReset"
+C5 = "karnali10gdisable"
+C7 = "karnali20gdisable"
+D1 = "atxpsu"
+
+[timings]
+fastboot = 8000
+reset = 20000
+uefi = 8000
+
+[functions]
+powerOffTheDevice = """
+FPPower 0
+usb0 1
+usb1 1
+usb3456 1
+"""
+
+powerOnTheDevice = """
+delay 500
+FPPower 0
+delay 900
+usb0 0
+usb1 0
+usb3456 0
+delay 30
+"""
+
+powerOff = """
+powerOffTheDevice
+FPPower 0
+volup 0
+voldn 0
+pedl 0
+"""
+
+powerOn = """
+powerOff
+powerOnTheDevice
+FPPower 1
+delay 800
+FPPower 0
+"""
+
+bootToEDL = """
+pkey 0
+volup 0
+voldn 0
+FPPower 0
+pkey 1
+pedl 1
+delay $reset
+pkey 0
+pedl 0
+"""
+
+bootToUEFI = """
+powerOffTheDevice
+// Put buttons in a set state
+pkey 0
+volup 1
+voldn 0
+pedl 0
+powerOnTheDevice
+pkey 1
+delay $uefi
+pkey 0
+volup 0
+delay 12
+pkey 1
+volup 1
+pkey 0
+volup 0
+"""
+
+bootToFastboot = """
+powerOffTheDevice
+pkey 0
+volup 0
+voldn 1
+pedl 0
+powerOnTheDevice
+pkey 1
+delay 800
+pkey 0
+delay $fastboot
+voldn 0
+delay 30
+voldn 1
+voldn 0
+"""
+
+reset = """
+pkey 0
+volup 0
+voldn 0
+pkey 1
+delay $reset
+pkey 0
+"""

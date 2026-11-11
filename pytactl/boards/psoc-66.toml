@@ -1,0 +1,22 @@
+# TAC_PSOC_66 of the upstream TAC config set.
+
+name = "Hawi MTP8975"
+description = "Hawi MTP8975 - PSoC"
+board_id = 66
+extends = ["psoc", "common", "common-no-usb1", "common-battery-edl"]
+
+[pins]
+15 = { initial = 0 }
+21 = { initial = 0 }
+29 = { initial = 0 }
+30 = { initial = 0 }
+31 = { initial = 0 }
+36 = { initial = 0 }
+38 = { initial = 0 }
+46 = "rcmsel"
+48 = "headset"
+49 = "msmreset"
+
+[functions]
+# bootToSecondaryEDL drives sedl: it could only fail.
+bootToSecondaryEDL = false

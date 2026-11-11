@@ -1,0 +1,19 @@
+# TAC_FTDI_65 of the upstream TAC config set.
+
+name = "Hawi MTP8975"
+description = "MTP8975 (Hawi) FTDI IO"
+usb_product = "ALPACA-LITE MTP8975"
+extends = ["ftdi", "common", "common-no-usb1", "common-battery-edl"]
+
+[pins]
+C5 = "msmreset"
+C6 = "rcmsel"
+
+[timings]
+fastboot = 6000
+uefiPowerOnDelay = 1500
+fastbootPress = 2000
+
+[functions]
+# bootToSecondaryEDL drives sedl: it could only fail.
+bootToSecondaryEDL = false
