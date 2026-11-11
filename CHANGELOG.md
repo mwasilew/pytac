@@ -9,35 +9,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Alpaca scripts are kept in `.alpaca` files, listed in a new `script_ref`
-  field of the `*.pinout.json`, so that a script change diffs line by line
-  instead of as a change to one long JSON string. Boards with the common
-  wiring share `common.alpaca`, which defines the eight standard quick
-  methods with every delay a variable set in the pinout's `variables`, and
-  `common-*.alpaca` overlays redefine some of them for a difference several
-  boards share (one USB line, an extra USB line, UEFI confirmed with the
-  power key alone) or add functions several boards have (battery-backed EDL
-  and reset); a board's own `TAC_<CHIP>_<ID>.alpaca` holds only the functions
-  particular to it, and `script_omit` lists the common ones it does not have.
-  Groups of boards wired differently share a family script of their own
-  (`battery-pkey.alpaca`, `pwr-off.alpaca`, `pic32cx.alpaca`). 49 of the 58
-  bundled configs take their functions from shared scripts, 42 of them
-  entirely. The bundled configs, `installconfigs` and `convertconfigs` use
-  this layout, and every bundled board drives its pins with the same timings
-  as before. Configs with the script inline, as upstream writes them, still
-  load.
-- **Renamed quick methods:** `bootToFastBoot` is now `bootToFastboot`
-  (TAC_FTDI_15, 16, 20, 22, 23, 64, 69, TAC_PSOC_7, 24) and `bootToUEFIMenu`
-  is now `bootToUEFI` (TAC_FTDI_15, 16, 22, 64, 69, TAC_PSOC_24), the names
-  every other board uses. Conversion renames them in upstream configs too.
-- The `logComment` messages of the shared functions are the same on every
-  board that uses them.
-- A pin marked `inverted` in a config pytactl writes is driven at the inverse
-  of the commanded level. Upstream's flag only inverts the indicator in the
-  QTAC UI on FTDI, PSOC and PIC32CX boards, so it is cleared in configs
-  pytactl did not write and in the bundled set; nothing driven changes.
-- The upstream config sync names the script functions whose behaviour a
-  difference changes, so a timing change shows what it affects.
+- **Board files replace the TAC configs.** Every debug board driven by a
+  script is described by a TOML file in `pytactl/boards/` that extends
+  profiles - a platform's default pin map, the scripts most boards run, small
+  overlays changing a few functions - and lists only what is particular to
+  the board: pins by physical pin, timings in milliseconds, and functions one
+  statement per line. 35 of the 58 board files are 20 lines or fewer. A board
+  is recognised by its USB product string (FTDI), board id (PSOC) or serial
+  prefix (PIC32CX), written in its board file; `devicelist.json` is gone.
+- Scripts run as the statements they list, checked when the board is loaded,
+  with every error naming the file, line and function; they are no longer
+  rewritten into Python and exec'd. Each function announces itself when it
+  runs, in place of the scripts' `logComment` lines.
+- Every board drives the same pins at the same levels with the same delays
+  as before. What could never work is left out, and the board file says so:
+  functions driving a pin the board does not have, FTDI pins on a bus that is
+  not a GPIO port (TAC_FTDI_30's bus D, the s2_* pins of TAC_FTDI_37, 39 and
+  71), placeholder pins with no command where setting them had no effect, and
+  device list entries without a config of their own.
+- **Renamed quick methods:** `bootToFastBoot` is now `bootToFastboot` and
+  `bootToUEFIMenu` is now `bootToUEFI`, the names every other board uses.
+- A pin marked `inverted` is driven at the inverse of the commanded level.
+- **CLI:** `--boards-dir` and `--board-file` replace `--tac-config-path` and
+  `--config-file-path`; `listconfigs` lists the board files and whether each
+  loads; the new `showconfig` shows a board's pins, timings and functions with
+  the file each comes from.
+
+### Removed
+
+- `installconfigs` and `convertconfigs`, and the upstream config sync: board
+  files are maintained in pytactl, not converted from upstream. pytactl no
+  longer depends on `platformdirs` or `requests`, and reads TOML with `tomli`
+  on Python 3.10.
 
 ## [3.2] - 2026-10-19
 
