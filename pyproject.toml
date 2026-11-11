@@ -51,6 +51,7 @@ dependencies = [
     "pyserial",
     "requests",
     "platformdirs",
+    "tomli; python_version < '3.11'",
     "hid",
 ]
 
