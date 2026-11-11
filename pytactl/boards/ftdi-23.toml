@@ -14,3 +14,8 @@ C4 = "pciehostbypass"
 D0 = "usbboot"
 D2 = "m2reset"
 D3 = "fcpo"
+
+[timings]
+powerOffHold = 500
+batteryDelay = 900
+usbDelay = 30

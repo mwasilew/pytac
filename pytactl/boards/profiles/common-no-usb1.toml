@@ -1,11 +1,6 @@
 # For boards that switch only one USB line: replaces the two power functions
 # of common.
 
-[timings]
-powerOffHold = 500
-batteryDelay = 900
-usbDelay = 30
-
 [functions]
 powerOffTheDevice = """
 battery 1

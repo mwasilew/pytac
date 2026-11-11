@@ -1,11 +1,6 @@
 # For boards that confirm the UEFI menu with the power key alone: replaces
 # bootToUEFI of common.
 
-[timings]
-uefiPowerOnDelay = 0
-uefi = 8000
-uefiRepeatDelay = 12
-
 [functions]
 bootToUEFI = """
 powerOffTheDevice

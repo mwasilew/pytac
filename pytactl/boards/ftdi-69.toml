@@ -15,3 +15,8 @@ D0 = "usbboot"
 D2 = "m2reset"
 D3 = "fcpo"
 D6 = false
+
+[timings]
+powerOffHold = 500
+batteryDelay = 900
+usbDelay = 30
