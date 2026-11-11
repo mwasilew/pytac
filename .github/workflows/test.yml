@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Qualcomm Technologies, Inc. and/or its subsidiaries.
 # SPDX-License-Identifier: BSD-3-Clause
 
-# Runs the test suite against the config set bundled in pytactl/tac_configs/.
+# Runs the test suite against the board files bundled in pytactl/boards/.
 name: Test
 
 on:

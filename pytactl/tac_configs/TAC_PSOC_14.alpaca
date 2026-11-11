@@ -1,7 +1,0 @@
-def bootToFastboot()
-	logComment ====== bootToFastBoot start ======
-	powerOffTheDevice
-	powerOnTheDevice
-	delay 3100
-	pkey 0
-	logComment ====== bootToFastBoot finished ======

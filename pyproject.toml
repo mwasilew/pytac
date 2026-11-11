@@ -49,8 +49,6 @@ dependencies = [
     "pyusb",
     "pexpect",
     "pyserial",
-    "requests",
-    "platformdirs",
     "tomli; python_version < '3.11'",
     "hid",
 ]
@@ -77,7 +75,7 @@ packages = ["pytactl"]
 version = { attr = "pytactl.__version__" }
 
 [tool.setuptools.package-data]
-pytactl = ["tac_configs/*", "boards/*.toml", "boards/*.md", "boards/profiles/*.toml"]
+pytactl = ["boards/*.toml", "boards/*.md", "boards/profiles/*.toml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
